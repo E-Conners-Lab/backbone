@@ -32,6 +32,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T03:36Z | Owner merged pull request 1 |
 | 2026-11-10, about 04:10 | Owner asked whether the build followed the workshop's method. Lab guide read in full: it runs through Spec Kit's seven commands, which v1 did not use. Owner chose to rebuild v1 through those steps. |
 | 2026-11-10T03:59Z | Rebuild setup done on branch `speckit-rebuild`: v1 tagged `v1-handbuilt`, game code removed, Spec Kit 1.2.2 initialized with the Claude integration |
+| 2026-11-10T04:18Z | Milestone 8: lab step 1 done in a new agent session. `/speckit-constitution` wrote the Spec Kit constitution, version 1.0.0, with conflicts flagged. Waiting for the owner's review. |
 
 ## Steps and results
 
@@ -77,6 +78,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 40 | Clean slate on the rebuild branch: remove `src/`, `tests/`, `dist/`, build config, game tools, `tasks.md`, verification videos | Done. Kept: the three `StarterKit/` inputs, `mock/`, `LICENSE`, `README.md`, `ARCADE.md`, `PROVENANCE.md`, `docs/`, `tools/build_runbook.py`. |
 | 41 | `specify init --here --force --non-interactive --integration claude` | Done. Spec Kit 1.2.2; skills in `.claude/skills/`, configuration in `.specify/`. |
 | 42 | Lab step 1, `/speckit-constitution`, from the running session | **Not run.** The session that ran `specify init` cannot see the new commands; the lab says to restart the agent in the project. |
+| 43 | Lab step 1, `/speckit-constitution`, in a new agent session started in the rebuild folder (Claude Code 2.1.322, `claude-fable-5-2`). Read first: the three `StarterKit/` files, the Spec Kit templates, the PID, this log and `PROVENANCE.md`. | Done; **waiting** for the owner's review. `.specify/memory/constitution.md`, version 1.0.0, holds all seven principles and their evidence in the Spec Kit structure. The only wording changes are the six listed in the file. Not committed. |
+| 44 | Independent check that nothing was weakened: a script compares every line and table cell of `StarterKit/CONSTITUTION.md` with the new file | Pass: 50 of 50 source pieces present, 7 principles, 7 Evidence lines, no placeholder left. A copy with two clauses deleted fails the check, as it should. |
+| 45 | Flag conflicts instead of weakening a principle | Principle text kept as written in every case. Five conflicts wait for the owner (K1–K5 in the open items). Five Spec Kit defaults are held to the stricter reading in the constitution's Governance section. Six places where the input spec or plan is looser than the constitution are carried to lab steps 2–5 (L1–L5, L7 in the open items). |
 
 ## Gotchas
 
@@ -96,6 +100,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | "Three equal paths carry a third each" is a tempting but wrong model | Forwarding is hop by hop | Spec case 7 |
 | Showcase recorder: a keyboard-laid link and typed costs did nothing in headless runs | The "press Enter to begin" hook swallowed every Enter when no person was there to press it | The hook is switched off once the run begins |
 | Showcase recorder: three cost edits on one link fell back to direct commands | With many links, that link's row was scrolled out of view in the inspector, so the click missed | Scroll the row into view before clicking |
+| Spec Kit's templates are looser than the constitution: tests are optional by default, and a plan may justify a constitution violation in its Complexity Tracking table | They are general-purpose defaults | The constitution's Governance section says the Evidence checks are required work and that a Complexity Tracking entry waives nothing |
+| The review comment Spec Kit puts at the top of the constitution is meant to be deleted before the file is committed, which would hide the flagged conflicts | Spec Kit treats that comment as scratch | The flags are copied into this log's open items |
+| The constitution command says to write only the constitution file, while the owner's rules say to log every step | The command guards against starting feature work early | This log and the runbook were updated; `PROVENANCE.md` was left alone and flagged as K5 |
 | First visible showcase run crashed after the owner pressed Enter | The agent told the owner to click in the window first; the click reached a game control, the game left the welcome screen, and the recorder waited for a button that was gone | A click shield covers the page while it waits; a missing button is no longer fatal. Checked by an automated click on Start. |
 
 ## Questions and answers
@@ -117,12 +124,26 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Does the Arcade need a hosted URL? | Owner | No. The template describes `hosted_url` as "public URL if it is deployed (GitHub Pages etc), else" blank, and the Arcade page asks only for a public repo URL with the consent box ticked. The Per-Hop Works example has a "Play now" link on the Arcade's own site; how that copy is produced was not verified. Checked 2026-11-09 from the template, the Arcade page and the example page. |
 | The rules say only the owner sets `consent_to_publish`, and the agent made the edit. Keep it or redo it by hand? | Agent | Owner, 2026-11-09: keep the edit. Recorded in PID amendment 1.2. |
 | Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
+| Conflicts K1–K5 between the constitution and the approved spec or the state of the repository | Agent | Open. Waiting for the owner. |
+| If I give permission to finish the project overnight, can you, or will I need to approve things during the night? | Owner | Agent: the six remaining lab steps and the build can run unattended only if the session does not stop for permission prompts, which the agent cannot see. Waiting for the owner in any case: `consent_to_publish`, the merge to `main`, and the checks that need a person. Needed before starting: the go-ahead, whether the agent may commit and push on this branch, and answers or defaults for K1–K5. Permission not yet given; step 2 not started. |
 
 ## Open items
 
 - A full showcase run of the hand-built v1 was recorded to game over (seed `2328`, 8:56, 15,134 delivered, 197 inputs, none missed). The owner chose to keep the video private, so it is not in this repository. An earlier entry saying no finished video exists is **corrected** by this one.
 - Branch `showcase-video` on the remote held that video. The agent's attempt to delete the remote branch was blocked by its permission settings. **Resolved:** the owner deleted the remote branch on 2026-11-09.
-- Spec Kit rebuild: the seven lab steps are still to be run, each reviewed by the owner before the next, in an agent session started in the rebuild folder.
+- Spec Kit rebuild: lab step 1 (constitution) is done and waits for the owner's review. Steps 2 to 7 are still to be run, each reviewed by the owner before the next, in an agent session started in the rebuild folder.
+- **K1, owner decides.** C2 names four player actions: add a link, change a cost, upgrade capacity, and later equal-cost sharing. The approved input spec also allows removing a link (Q5, two amendments, `removeLink` in the plan) and choosing a reward (R10, AC17). Link removal is missing from the spec's v1 Tools row and has no acceptance criterion. Amend C2 to name them, or cut link removal from v1.
+- **K2, owner decides.** C2's learning sequence puts equal-cost sharing before surviving failures. v1 ships fiber cuts and defers sharing to v1.2, and endless mode has every tool from the start. The order exists only in the v1.3 campaign, and no Evidence line tests it.
+- **K3, owner decides.** C4 says "No green and no red anywhere" but green and red are not defined. The hand-built v1 defined hue bands only in test code (green 75–165°, red under 25° or over 340°, skipping greys and near-blacks) and passed rendered frames at "under 1% of strongly colored pixels". A tolerance is not in the principle.
+- **K4, owner decides.** C7 says the owner sets `consent_to_publish`, never the agent. `ARCADE.md` holds `true`, typed by the agent on the owner's instruction (PID amendment 1.2). That consent followed play of the hand-built v1. Whether it covers the rebuilt game is the owner's call; the agent does not touch the field.
+- **K5, owner decides.** C7 says `PROVENANCE.md` is kept from the first session. On this branch it stops at 2026-11-10T01:06Z: nothing on the showcase session, the rebuild decision, `specify init` or lab step 1, and it still says Spec Kit is "installed, not used". How the rebuild's provenance is laid out (a new part of the same file, or a new file) is the owner's call.
+- **L1, lab steps 2–3.** C3 says the drop meter's rules are stated exactly in the spec. The input spec's R7 says "drains slowly"; the exact numbers exist only in the plan's tuning table.
+- **L2, lab step 2.** C1 needs the two model tables, an RFC section for every faithful claim and the hand-worked cases in the spec. Spec Kit's spec template has no slot for them.
+- **L3, lab step 4.** C5's evidence covers the DOM, renderer, clock and `Math.random`. The input plan's purity check covers imports from DOM, render and ui only.
+- **L4, lab step 4.** C6 says tuning constants live in data files. The input plan's as-built note puts them in `src/sim/world.ts`, and tag `v1-handbuilt` confirms it (`DEFAULT_TUNING`).
+- **L5, lab step 5.** C7 says routing correctness and the core loop are fixed before any visual effect. Spec Kit's tasks template groups tasks by user story, and the first story includes the pulses.
+- **L7, lab step 7.** C7's evidence needs seeded-run videos at phone and desktop sizes saved in the repo. They were removed in the clean slate and must be recorded again. The owner's choice to keep the showcase video private is read as covering that video only.
+- Four phrases in the constitution are kept as the owner wrote them though they cannot be tested as worded: the C2 learning sequence, "Built in a few days", "reviewed and tested like any other contribution" and "a README another engineer can follow". The C2 evidence needs a person as tester and stays "not run" until someone does it.
 - On the rebuild branch `README.md`, `ARCADE.md`, `docs/spec-map.*` and the secure-build checklist still describe the hand-built v1. They are rewritten after step 7.
 
 - These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
