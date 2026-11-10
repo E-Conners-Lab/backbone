@@ -246,6 +246,9 @@ not prompts, and are not counted.
 | R25 | 2026-11-10T18:26Z | After the second round: `npm test`, `npm run test:e2e` (twice), `npm run verify:dist`, `python3 tools/frr_check.py` (third run) | Unit 121 of 121. End-to-end 74 pass, 4 skipped by design, after one test helper was rewritten. `dist/` matches at `7401e30`. FRR: pass, 21 of 21. |
 | R26 | 2026-11-10T18:36Z | Third `/code-review high`, a third forked session of `claude-fable-5-2` (181,368 tokens and 22 tool calls as reported by the harness); triage and fixes by the build agent | 10 findings: 8 fixed, 2 left; 3 more the reviewer cut, left. No fourth review, by the owner's word. |
 | R27 | 2026-11-10T18:46Z | After the third round: `npm test`, `npm run test:e2e`, `npm run verify:dist`, `python3 tools/frr_check.py` (fourth run), `node tools/confirm-runtime.mjs` | Unit 124 of 124. End-to-end 74 pass, 4 skipped by design. `dist/` matches at `9b813ab`. FRR: pass, 21 of 21, identical output. Runtime section confirmed. |
+| R28 | 2026-11-10T18:50Z | `npm run record` on the final code; `node tools/run-ts.mjs tools/bot-runs.ts stage-1`; `ffprobe`, `ffmpeg` for two frames | Both videos 7,302 delivered at 6:51; Node run equal. |
+| R29 | 2026-11-10T18:52Z | `node tools/confirm-runtime.mjs` on the final build; `docs/spec-map.png` rendered again (the page fetched IBM Plex from Google Fonts with a generic headless browser request) | Runtime section confirmed, 8 of 8. Spec map shows 124, 74 and 198. |
+| R30 | 2026-11-10T18:58Z | Fresh-copy check on a clone of `0e8572a`: `npm ci`, `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e`, `node tools/confirm-runtime.mjs` | All pass: 124 unit, 74 end-to-end with 4 skipped by design, `dist/` equal to a fresh build, runtime 8 of 8. |
 
 ## Changes of direction by the owner in the rebuild
 

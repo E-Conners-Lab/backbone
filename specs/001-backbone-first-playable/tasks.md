@@ -222,7 +222,7 @@ description: "Task list for Backbone, first playable version (v1)"
 - [X] T067 Update `ARCADE.md` (leave `consent_to_publish` exactly as it is; C7, K4), `docs/secure-build-checklist.md` and `docs/spec-map.html` so they describe the rebuilt game.
 - [X] T068 Run `/code-review` at level `high` on the branch, fix the real findings, and record what was left and why (C5: AI output is reviewed like any other contribution).
 - [X] T069 Fresh-copy check: clone the branch into an empty folder, serve `dist/`, then `npm ci`, `npm test`, `npm run build`, `npm run verify:dist` and `npm run test:e2e`; record the results in `docs/verification/results.md` (SC-010).
-- [ ] T070 Bring `PROVENANCE.md`, `docs/capture-log.md` and `docs/runbook.html` up to date (C7).
+- [X] T070 Bring `PROVENANCE.md`, `docs/capture-log.md` and `docs/runbook.html` up to date (C7).
 
 ---
 

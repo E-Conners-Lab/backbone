@@ -321,3 +321,69 @@ After this round: `npm test` 124 of 124; `npm run test:e2e` 74 pass, 4 skipped b
 Seen in the frames and left as they are: on the game-over screen the result card covers the western sites while the time-lapse plays behind it, and a cost label can sit partly under a site's name where a link leaves the site at a shallow angle.
 
 The videos were recorded three times. The first pair (build `68c4588`) showed a site under the control bar at phone size, which led to the framing fix. The second pair (`24ea96b`) predated the second and third review rounds. This pair is from the final code. All three gave the same score, time and drop counts: the review fixes changed how the game is drawn and handled, not what the simulation computes.
+
+## Fresh copy (T069, SC-010; 2026-11-10T18:58Z)
+
+The branch was cloned into an empty folder (`git clone --branch speckit-rebuild --single-branch`), at commit `0e8572a`, and the README's commands were run there in order. Nothing was copied in from the working folder; Playwright's Chromium was already in the machine's cache. An earlier fresh-copy check, on `69aa8d4` at 17:54Z, passed too; it predates the second and third review rounds and is replaced by this one.
+
+| Step | Result |
+| --- | --- |
+| The clone is clean and has no `node_modules` | Pass |
+| `python3 -m http.server 8791 --bind 127.0.0.1 --directory dist`, before anything is installed | Pass: the page served equals the clone's `dist/index.html`, and the script, the stylesheet and the hero image it names answer 200 |
+| `npm ci` | Pass: 45 packages |
+| `npm test` | Pass: 124 of 124 |
+| `npm run build` | Pass |
+| `npm run verify:dist` | Pass: `dist/` matches a fresh build, 13 files, and the build left `dist/` unchanged in the clone |
+| `npm run test:e2e` | Pass: 74 pass, 4 skipped by design, 0 fail. This includes a whole run played with the network cut. |
+| `node tools/confirm-runtime.mjs` | Pass: 8 of 8 claims of `ARCADE.md`'s Runtime section hold |
+| No tracked file changed by any of the above | Pass |
+
+What this does and does not show: the commands in the README work from a fresh copy on the build machine (macOS 26.7.1, arm64, Node 26.3.1). They were run by the build agent, not followed by another engineer, and not on another machine or operating system. `npm run record` and `python3 tools/frr_check.py` were not run in the clone; they were run in the working folder.
+
+## Final run (2026-11-10)
+
+The code and the build output were last changed in commit `9b813ab`. Commits after it change records and the videos only.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| `npm test` | Working folder at `9b813ab`; clone of `0e8572a` | 124 of 124 pass, 16 files, both times |
+| `npm run test:e2e` | Working folder at `9b813ab`; clone of `0e8572a` | 74 pass, 4 skipped by design, 0 fail, both times |
+| `npm run verify:dist` | Working folder at `9b813ab`; clone of `0e8572a` | `dist/` matches a fresh build, 13 files, both times |
+| `python3 tools/frr_check.py` | Working folder, with the tool as it now is (fourth run) | Pass, 21 of 21; lab removed |
+| `npm run record` | Working folder, final build | Both videos: 7,302 delivered in 6:51 |
+| `node tools/confirm-runtime.mjs` | Working folder, final build; clone of `0e8572a` | Confirmed, 8 of 8, both times |
+| `npm audit`; gitleaks over the working tree | Working folder, 2026-11-10, before the review rounds, which added no dependency | 0 vulnerabilities; no leaks |
+
+The four skipped end-to-end tests are each run at the other screen size: touch gestures (AC15) run at phone size only; mouse and wheel (AC16), keyboard-only play (AC17) and the resize test run at desktop size only.
+
+**Failed:** nothing in the final run.
+
+**Not verified** (needs a person or equipment the build did not have): SC-011, SC-012 and SC-013; a person playing the rebuilt game at all; browsers other than Chromium; screen readers; a real phone; frame rate on real graphics hardware; the README followed by another engineer. The third review round's fixes were tested but not reviewed again.
+
+## Ready for the Arcade: what the workshop repo asks, and where this stands
+
+Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` (the repo's latest): the lab guide's section "Optional: put your game in the Arcade", its "Ready-to-demo checklist", `WORKSHOP/LAB/StarterKit/ARCADE.md`, `WORKSHOP/LAB/StarterKit/README.md` and `WORKSHOP/LAB/Examples/PerHopWorks/ARCADE.md`; and against the Arcade page, whose template is the same file as the repo's.
+
+**The four steps to a listing**
+
+| Step in the lab guide | State | Evidence |
+| --- | --- | --- |
+| 1. `ARCADE.md` at the root of the repository, from the template | Done | Every field of the template is present with the template's names; `artifacts` uses the template's seven words; text limits kept (tagline 76 characters of 90; "How it was built" 246 words of 250; three bullets) |
+| 2. Filled in by the build agent, with `unknown` where nothing was recorded; the human gives only name, GitHub name, location, links, first project, consent | Done | `started`, `wall_time` and token usage are `unknown`. The creator block is the owner's, from 2026-11-09, and was not touched by the rebuild (compared with the commit the session began from). |
+| 3. Run the game once to confirm the Runtime section; a 16:9 card image under 1 MB; commit and push | Runtime confirmed; image present; committed. **Not pushed.** | `node tools/confirm-runtime.mjs`: 8 of 8. `public/hero.webp`: 1600×900, 51,902 bytes, WebP, and the same file is in `dist/`. Pushing is the owner's. |
+| 4. Send the public GitHub URL to John; nothing is listed unless `consent_to_publish: true` | **The owner's** | The repository is public and Apache-2.0. Its default branch `main` still holds the hand-built v1; the rebuild branch contains all of `main` and is ahead of it, with no divergence, so it can be brought in by fast-forward or by a pull request. `consent_to_publish` is `true` in the file, set on the owner's word on 2026-11-09 after he played the hand-built v1; whether it covers the rebuilt game is his to say (K4). |
+
+**The lab's ready-to-demo checklist**
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| The player can complete the scoped game from a fresh start | By automation, yes; by a person, not yet | End-to-end runs from a fresh load to game over at both sizes; the runtime check plays a run from the plain URL |
+| Correct, incorrect, and edge cases match independently checked expectations | Yes | The twelve hand-worked cases, a brute-force oracle on 320 graphs, and FRR |
+| Every wrong choice explains a specific misconception | In this game's terms | The item is written for question-and-answer games. Here every refused action says why in words (AC5, AC25, FR-040), and "About the model" says what is simplified. There is no wrong-answer screen. |
+| Core interactions work with the keyboard and visible focus | Yes | AC17 |
+| The README's commands work from a fresh checkout | Yes | "Fresh copy" above |
+| Verification notes distinguish passed, failed, and untested checks | Yes | The README's verification table and this file |
+| The intended files are pushed, and any live demo link opens | **Not pushed.** No live demo is claimed. | The owner's |
+
+**The README against the workshop's README shape:** title, one-line pitch, the workshop line, the project table, the challenge, what you'll learn with "Before playing", play locally, how to play with a controls table and "Progress", what the game models with "Outside the model" and a reference table, how it was built with the template's six points, verification with "Last checked" (date, system, browser, commit) and a results table that marks unrun checks as not run, known limitations and next steps, credits in the template's wording, assets and dependencies, licence. Nothing in the template's block for the attendee is left in.
+

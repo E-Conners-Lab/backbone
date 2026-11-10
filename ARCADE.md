@@ -37,7 +37,7 @@ creator:                     # (HUMAN) filled in from the owner's answers on 202
 
 build:
   started: unknown           # not recorded; the rebuild's first captured timestamp was 2026-11-10T04:14Z
-  finished: "@@FINISHED@@"
+  finished: "2026-11-10T18:58:55Z"   # the last check, the fresh-copy run; the code was last changed at 2026-11-10T18:46Z
   wall_time: unknown         # start was not recorded, and the session waited about 11 hours for the owner
   spec_driven:
     framework: "GitHub Spec Kit"   # the workshop's seven steps: constitution, specify, clarify, plan, tasks, analyze, implement
