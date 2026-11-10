@@ -35,6 +35,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T04:18Z | Milestone 8: lab step 1 done in a new agent session. `/speckit-constitution` wrote the Spec Kit constitution, version 1.0.0, with conflicts flagged. Waiting for the owner's review. |
 | 2026-11-10, about 15:05 | Owner's go-ahead: finish the rebuild without step-by-step review, commit as you go, take the agent's recommendations for K1–K5. Pushing was not mentioned, so nothing is pushed. |
 | 2026-11-10T15:11Z | Lab step 1 committed; constitution amended to version 1.1.0 with the owner's decisions K1 and K2; the rebuild's part of `PROVENANCE.md` started (K5) |
+| 2026-11-10T15:19Z | Lab step 2 done: `/speckit-specify` wrote `specs/001-backbone-first-playable/spec.md` |
 
 ## Steps and results
 
@@ -87,6 +88,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 47 | Apply the owner's decisions K1 and K2 to the constitution | Done: version 1.1.0. C2 names "add or remove a link" and "choose a reward", and says the learning sequence is the order of the campaign's regions. The carry-over check passes with those two changes declared. |
 | 48 | Fetch the workshop lab guide at commit `b77da71` for the exact prompts of lab steps 2–7 | Done; hashes in `PROVENANCE.md` |
 | 49 | Start the rebuild's part of `PROVENANCE.md` (K5) | Done |
+| 50 | Lab step 2, `/speckit-specify`, with the lab's prompt plus one sentence naming K1, K3, L1 and L2 | Done. `specs/001-backbone-first-playable/spec.md`: five stories, AC1–AC23 kept and AC24–AC25 added for link removal (K1), both model tables and cases 1–12 carried (L2), the drop meter rule stated exactly with its three numbers (L1), green and red defined by hue bands (K3). No clarification markers. Spec Kit created no branch, so work stays on `speckit-rebuild`. |
+| 51 | Independent check that the spec preserves the approved input | Pass: 246 pieces compared with `StarterKit/SPEC.md`. First run failed on three acceptance criteria whose rewording had dropped words (AC14, AC15, AC22); their wording was restored and the check passes. Five table cells differ on purpose and are declared in the check. |
 
 ## Gotchas
 
@@ -110,6 +113,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | The review comment Spec Kit puts at the top of the constitution is meant to be deleted before the file is committed, which would hide the flagged conflicts | Spec Kit treats that comment as scratch | The flags are copied into this log's open items |
 | The constitution command says to write only the constitution file, while the owner's rules say to log every step | The command guards against starting feature work early | This log and the runbook were updated; `PROVENANCE.md` was left alone and flagged as K5 |
 | First visible showcase run crashed after the owner pressed Enter | The agent told the owner to click in the window first; the click reached a game control, the game left the welcome screen, and the recorder waited for a button that was gone | A click shield covers the page while it waits; a missing button is no longer fatal. Checked by an automated click on Start. |
+| Rewriting acceptance criteria into Spec Kit's Given/When/Then form quietly dropped words from three of them | The form invites rephrasing | A script compares each criterion's words with the input; the three were restored to the input's wording |
 
 ## Questions and answers
 
@@ -143,8 +147,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 - **K3, owner decides.** C4 says "No green and no red anywhere" but green and red are not defined. The hand-built v1 defined hue bands only in test code (green 75–165°, red under 25° or over 340°, skipping greys and near-blacks) and passed rendered frames at "under 1% of strongly colored pixels". A tolerance is not in the principle. **Resolved** 2026-11-10: the owner chose hue bands in the spec, no authored color inside them, and the rendered-frame figure reported as a number.
 - **K4, owner decides.** C7 says the owner sets `consent_to_publish`, never the agent. `ARCADE.md` holds `true`, typed by the agent on the owner's instruction (PID amendment 1.2). That consent followed play of the hand-built v1. Whether it covers the rebuilt game is the owner's call; the agent does not touch the field. **Decided** 2026-11-10: the owner re-confirms after playing the rebuilt game. Still waiting on that.
 - **K5, owner decides.** C7 says `PROVENANCE.md` is kept from the first session. On this branch it stops at 2026-11-10T01:06Z: nothing on the showcase session, the rebuild decision, `specify init` or lab step 1, and it still says Spec Kit is "installed, not used". How the rebuild's provenance is laid out (a new part of the same file, or a new file) is the owner's call. **Resolved** 2026-11-10: the owner chose a new part of the same file; it was started the same day.
-- **L1, lab steps 2–3.** C3 says the drop meter's rules are stated exactly in the spec. The input spec's R7 says "drains slowly"; the exact numbers exist only in the plan's tuning table.
-- **L2, lab step 2.** C1 needs the two model tables, an RFC section for every faithful claim and the hand-worked cases in the spec. Spec Kit's spec template has no slot for them.
+- **L1, lab steps 2–3.** C3 says the drop meter's rules are stated exactly in the spec. The input spec's R7 says "drains slowly"; the exact numbers exist only in the plan's tuning table. **Resolved** 2026-11-10: the spec's FR-010 states the rule and its three numbers.
+- **L2, lab step 2.** C1 needs the two model tables, an RFC section for every faithful claim and the hand-worked cases in the spec. Spec Kit's spec template has no slot for them. **Resolved** 2026-11-10: the spec carries them in added sections.
 - **L3, lab step 4.** C5's evidence covers the DOM, renderer, clock and `Math.random`. The input plan's purity check covers imports from DOM, render and ui only.
 - **L4, lab step 4.** C6 says tuning constants live in data files. The input plan's as-built note puts them in `src/sim/world.ts`, and tag `v1-handbuilt` confirms it (`DEFAULT_TUNING`).
 - **L5, lab step 5.** C7 says routing correctness and the core loop are fixed before any visual effect. Spec Kit's tasks template groups tasks by user story, and the first story includes the pulses.

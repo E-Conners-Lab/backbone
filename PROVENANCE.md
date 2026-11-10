@@ -213,6 +213,8 @@ not prompts, and are not counted.
 | R2 | 2026-11-10T04:18Z | Independent carry-over check: a script compares every line and table cell of the source with the new file | Pass, 50 of 50. A copy with two clauses deleted fails, as it should. |
 | R3 | 2026-11-10T15:09Z | Commit lab step 1 | `431cba3`. Not pushed. |
 | R4 | 2026-11-10T15:11Z | Amend the constitution with the owner's decisions K1 and K2 | Version 1.1.0. Carry-over check passes with the two changes declared. |
+| R5 | 2026-11-10T15:19Z | Lab step 2: `/speckit-specify` with the lab's prompt plus one sentence naming K1, K3, L1, L2 | `specs/001-backbone-first-playable/spec.md` and its requirements checklist. AC1–AC23 kept; AC24–AC25 added. |
+| R6 | 2026-11-10T15:19Z | Independent preservation check of the spec against `StarterKit/SPEC.md` | First run: fail, three criteria had lost words in rewording. Fixed. Second run: pass, 246 pieces. |
 
 ## Changes of direction by the owner in the rebuild
 
