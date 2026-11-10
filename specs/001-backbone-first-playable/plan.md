@@ -134,6 +134,8 @@ dist/                    Build output, committed. The Arcade static_root.
 docs/verification/       Recorded results, the hand trace, the seeded-run videos
 ```
 
+**Names used in these documents**: the *fallback renderer* is the Canvas 2D renderer (`src/render/canvas2d.ts`); the spec calls it "a 2D renderer". The *scripted player* is `src/sim/bot.ts`, switched on with `bot=1`.
+
 **Structure Decision**: one project at the repository root, the "single project" option of the template with a browser front end and no back end. `src/sim` is the only place rules live. `src/content` is the only place numbers, colors, regions and explanatory text live. `src/render` and `src/ui` read the simulation and never write to it except through commands.
 
 ## Stack and Serving
@@ -217,6 +219,8 @@ The drop meter's three numbers are kept in `tuning.json` like the rest, and a te
 
 If time runs short, cut from slice 6 upward, never from slices 1–2.
 
+In `tasks.md`, slices 1 and 2 are Phase 2 (Foundational); slice 3 is Phases 3 to 5 (User Stories 1 to 3); slice 4 is Phase 6 (User Story 4); slice 5 is Phase 7 (User Story 5); slice 6 is Phase 8; slice 7 is Phase 9.
+
 ## Verification and Reporting
 
 | Check | Tool | Establishes |
@@ -227,8 +231,10 @@ If time runs short, cut from slice 6 upward, never from slices 1–2.
 | Purity | Vitest source scan of `src/sim` | C5 |
 | Content | Vitest: region validation, trial region, model notes, tuning matches FR-010 | C6, C1 |
 | Authored colors | Vitest: palette outside both bands; no color literal outside `palette.json` | FR-032a (SC-007) |
+| Contrast and text size | Vitest: every text color at least 4.5 to 1 on its background. Playwright: smallest text at both sizes | FR-037 |
+| Readable names | Playwright: every control on every screen has a non-empty accessible name | FR-029 |
 | Full run, phone 844×390 and desktop 1920×1080 | Playwright with real touch and pointer events | The game is playable start to game over (SC-005) |
-| Fallback and reduced-motion runs | Playwright with the fallback switch and the reduced-motion media setting | AC19, AC20 |
+| Fallback and reduced-motion runs | Playwright with WebGL2 made unavailable (automatic fallback), with the `renderer=2d` switch, and with the reduced-motion media setting. Both renderers must report the same scene for the same step. | AC19, AC20 |
 | Keyboard-only run | Playwright | AC17 |
 | Offline | Playwright against `dist/` with non-local requests blocked and counted | SC-006 |
 | Rendered-frame census | Playwright screenshots decoded in Node, both renderers | FR-032b, reported as a number |

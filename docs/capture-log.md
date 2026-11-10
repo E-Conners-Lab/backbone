@@ -39,6 +39,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T15:22Z | Lab step 3 done: `/speckit-clarify`, five questions, all answered by the build agent for the owner's later review |
 | 2026-11-10T15:30Z | Lab step 4 done: `/speckit-plan` wrote the plan, research notes, data model, three contracts and the quickstart |
 | 2026-11-10T15:33Z | Lab step 5 done: `/speckit-tasks` wrote 69 tasks |
+| 2026-11-10T15:39Z | Lab step 6 done: `/speckit-analyze` run twice, with the fixes between |
 
 ## Steps and results
 
@@ -96,6 +97,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 52 | Lab step 3, `/speckit-clarify`. The owner was away, so the agent answered its own five questions from the approved decisions and marked each answer as its own. | Done. Recorded in the spec's Clarifications section: the inspector also shows a selected router's table (new AC26, from LO1's evidence line); router IDs follow the order of appearance and are shown in the inspector; a link serves before it accepts arrivals in a step (the only order that gives case 9 its hand-worked 40, 8 and 12); verification covers Chromium only; v1 reward offers are the same two choices every time (K6). Checklist still 16 of 16. Preservation check passes with two more declared cells. |
 | 53 | Lab step 4, `/speckit-plan`, with the lab's prompt | Done. `plan.md`, `research.md`, `data-model.md`, `contracts/` (simulation, content, controls) and `quickstart.md` in the feature folder. Constitution Check passes with no violation. Ten contradictions between the input plan, the spec, the constitution and this machine are resolved in a table (P1–P10), among them tuning constants moved to a data file (L4) and a purity test that also covers globals (L3). Toolchain checked: Node 26.3.1, npm 11.16.0, Docker running, ffmpeg and cwebp present; package versions read from the npm registry. |
 | 54 | Lab step 5, `/speckit-tasks`, with the lab's prompt | Done. `specs/001-backbone-first-playable/tasks.md`: 69 tasks in nine phases. Setup (6), the simulation with no graphics (21, tests written first), five story phases (27), the four effects (4), packaging and evidence (11). Tests are required tasks, not optional ones. A script confirmed the numbering, the format, a path in every task and that every acceptance criterion AC1–AC26 is named by a task. |
+| 55 | Lab step 6, `/speckit-analyze`, first pass | 15 findings: 1 critical (the color rule let a share of green or red above zero stand as a known limit without going to the owner), 2 high (the text review left out the README; the no-WebGL check was scheduled before the WebGL renderer existed), 6 medium, 5 low, 1 open decision (K6). Listed in `docs/verification/analysis.md`. |
+| 56 | Fix the findings in the spec, plan and tasks, then rerun the analysis | Done. Second pass: every requirement (40), success criterion (13), acceptance criterion (26), rule (14) and principle (7) is named by a task; 70 tasks; no critical or high finding left. The owner did not review the fixes; each is listed in the analysis file. |
 
 ## Gotchas
 
@@ -147,6 +150,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Clarify 3: in one simulation step, does a link serve before or after it accepts arrivals? | Agent (clarify step) | Agent, for the owner's review: it serves first. Worked by hand, only that order gives case 9 exactly 40 served, 8 queued, 12 dropped; the other order gives 40, 7 and 13. |
 | Clarify 4: in which browsers must v1 be verified? | Agent (clarify step) | Agent, for the owner's review: Chromium only, as in the hand-built v1; other browsers are listed as not verified. |
 | Clarify 5: does a v1 reward offer vary with the seed? | Agent (clarify step) | Agent, for the owner's review: no, every offer is the same two choices. See K6. |
+| What contrast and text size make "high contrast and large type" checkable? (analysis finding B1) | Agent (analysis step) | Agent, for the owner's review: text contrast at least 4.5 to 1; no text under 16 CSS pixels at 1920×1080 or 11 at 844×390, following the approved mock's base unit. |
 
 ## Open items
 

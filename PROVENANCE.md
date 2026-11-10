@@ -218,6 +218,7 @@ not prompts, and are not counted.
 | R7 | 2026-11-10T15:22Z | Lab step 3: `/speckit-clarify`. Five questions asked and answered by the build agent itself, because the owner was away | Five clarifications recorded in the spec, each marked as the agent's answer. One (reward offers) departs from the wording of the owner's decision Q2 and is flagged as K6. AC26 added. |
 | R8 | 2026-11-10T15:30Z | Lab step 4: `/speckit-plan` with the lab's prompt. Tool versions read with `node --version`, `npm --version`, `docker version`, `npm view` | Plan and design files written. No research agents were used. Ten contradictions resolved in the plan (P1–P10). |
 | R9 | 2026-11-10T15:33Z | Lab step 5: `/speckit-tasks` with the lab's prompt | `tasks.md`, 69 tasks. Format and coverage checked by script: sequential IDs, story labels only in story phases, every AC named. |
+| R10 | 2026-11-10T15:39Z | Lab step 6: `/speckit-analyze`, two passes, with fixes to the spec, plan and tasks between them | Pass 1: 15 findings (1 critical, 2 high). Pass 2: none critical or high; full coverage by ID. Report in `docs/verification/analysis.md`. |
 
 ## Changes of direction by the owner in the rebuild
 

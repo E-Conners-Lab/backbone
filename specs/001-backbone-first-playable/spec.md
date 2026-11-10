@@ -239,13 +239,13 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 
 **Building the network**
 
-- **FR-012 (R9 Budget, Q6)**: Fiber is measured in kilometres. Laying a link spends fiber equal to the link's length on the map. A link MUST NOT be laid without enough fiber, from a site to itself, or where a link between the two sites already exists. A refused attempt spends nothing.
+- **FR-012 (R9 Budget, Q6)**: Fiber is measured in kilometres. Laying a link spends fiber equal to the link's length on the map, rounded to a whole kilometre. A link MUST NOT be laid without enough fiber, from a site to itself, or where a link between the two sites already exists. A refused attempt spends nothing.
 - **FR-013 (Q5 Removing a link)**: The player can remove a link that is up. Removal returns the link's fiber in full, forfeits the upgrades spent on it, and drops the packets on it or queued for it (FR-009b). A link that is cut MUST NOT be removable until it is repaired.
 - **FR-014 (Capacity upgrades)**: Capacity comes in tiers. Applying an upgrade spends one upgrade from the player's stock and raises the link one tier in both directions. Its cost is unchanged (S6). Without an upgrade in stock, or on a link at the top tier, the attempt changes nothing.
 - **FR-015 (S6 Default cost)**: A new link has cost 10.
 - **FR-016 (R10 Rewards)**: At fixed intervals of simulated time (*tunable*) the game pauses and the player chooses one of the offered rewards. In v1 every offer holds the same two choices: a fixed amount of fiber (*tunable*), or one capacity upgrade. The offer therefore does not vary with the seed, and stays deterministic. The choice has no time limit.
 - **FR-017 (R11 Fiber cuts)**: At times decided by the seed, one link that is up is cut for a period and then restored. The cut and the restore each trigger FR-001.
-- **FR-018 (Sites)**: A run starts with a few sites of the region and gains more over time, as decided by the seed. A new site is marked as new and neither sends nor receives traffic until its grace period (*tunable*) ends. Router IDs are whole numbers given in the order the run introduces its sites, starting at 1.
+- **FR-018 (Sites)**: A run starts with a few sites of the region and gains more over time (*tunable* counts and interval), as decided by the seed. A new site is marked as new and neither sends nor receives traffic until its grace period (*tunable*) ends. Router IDs are whole numbers given in the order the run introduces its sites, starting at 1.
 
 **The run**
 
@@ -267,12 +267,12 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 - **FR-031 (Inspector)**: The pause inspector lists every link as text: its two sites, cost, capacity, utilization in each direction and state (up or cut, load state, and any pending change). It lists every site with its code, router ID and state. Selecting a site lists that router's table in force: every destination with its total cost and next hop (AC26).
 - **FR-032 (No green, no red; AC18, K3)**: No color in the shipped game is green or red. A color's hue is its angle on the 0–360° color wheel, computed from its red, green and blue values. **Green is any hue from 75° to 165°. Red is any hue below 25° or above 340°.** A color is judged only if it is strongly colored: its saturation (largest channel minus smallest, divided by the largest) is at least 0.25 and its largest channel is at least 0.2 of full scale. Greys, whites and near-blacks have no meaningful hue.
   - **(a) Authored colors.** Every color value written in the game's palette, styles, markup and drawing code MUST lie outside both bands. The count inside is zero.
-  - **(b) Rendered frames.** Glow and blending mix authored colors on screen. A scripted census of rendered frames, in both renderers, MUST report the share of strongly colored pixels in each band as a number. A share above zero is reported as that number and listed as a known limit; it is never described as "none". A share above 1% in either band fails the check.
+  - **(b) Rendered frames.** Glow and blending mix authored colors on screen. A scripted census of rendered frames, in both renderers, MUST report the share of strongly colored pixels in each band as a number. The target is zero. Any share above zero is a deviation from C4: it is reported as that number, never described as "none", and taken to the owner, who alone can accept it. As a guard against regressions the automated check also fails outright above 1% in either band.
 - **FR-033 (Second cues)**: Every color state carries a second cue. Congestion is amber *and* thicker *and* patterned, with a warning icon. Failure is magenta *and* a broken line, with a cut icon. A dark site is a hollow ring with a slashed icon. A link's capacity tier is shown by thin rails beside it, and queued packets are drawn stacked at the sending end.
 - **FR-034 (Reduced motion)**: A reduced-motion setting, on by default when the device asks for it, stops sweeps, parallax and trails. All state information remains.
 - **FR-035 (Fallback drawing)**: Where WebGL is unavailable the game plays in a 2D renderer that shows the same information.
 - **FR-036 (The four must-have effects)**: Packets as light pulses with trails; link brightness and thickness that scale with load; a fiber cut that snaps with a magenta spark, followed by a visible reconvergence ripple; soft bloom on everything lit.
-- **FR-037 (Layouts, Q9)**: Landscape is the designed layout. Portrait works and stacks the HUD. For stage use the layout has high contrast and large type.
+- **FR-037 (Layouts, Q9)**: Landscape is the designed layout. Portrait works and stacks the HUD. For stage use the layout has high contrast and large type: every text color has a contrast ratio of at least 4.5 to 1 against the background it sits on, and no text is smaller than 16 CSS pixels at 1920×1080 or 11 CSS pixels at 844×390.
 - **FR-038 (Hero art, Q7)**: One 16:9 illustration of the lit network map on the welcome screen, rendered by the game's own renderer from a composed scene, and reused under 1 MB as the Arcade card image.
 - **FR-039 (Self-contained)**: The game is static files. While playing it needs no account, backend, network access, model or API key.
 - **FR-040 (Messages)**: Every refused action explains itself in text, never by color or motion alone.
@@ -381,6 +381,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 - A typed seed is 1 to 24 letters, digits or hyphens (FR-022), and five best scores are kept (FR-023).
 - A change made while paused is checked when it is made, against the state the earlier pending changes will produce.
 - Automated checks run in Chromium. Other browsers are not verified in v1 and are listed as a limit in the README (clarified 2026-11-10).
+- The contrast ratio and the two minimum text sizes in FR-037 were set by the build agent during the analysis of 2026-11-10 so that "high contrast and large type" can be checked. The sizes follow the base unit of the mock the owner approved. They wait for the owner's review.
 
 **Dependencies**: the texts of RFC 2328 and RFC 2991 as recorded in `PROVENANCE.md`; a public-domain coastline for the region map; an openly licensed typeface shipped with the game.
 
