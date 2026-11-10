@@ -29,12 +29,12 @@ description: "Task list for Backbone, first playable version (v1)"
 
 **Purpose**: An empty project that type-checks, tests and builds.
 
-- [ ] T001 Create `package.json` with exact versions and no runtime dependency (FR-039): typescript 7.0.2, vite 8.3.7, vitest 5.1.0, @playwright/test 1.65.0, @fontsource/ibm-plex-sans 5.3.0, @fontsource/ibm-plex-mono 5.3.0, @types/node 26.6.6; scripts `dev`, `build`, `test`, `test:e2e` (builds first), `verify:dist`, `record`. Run `npm install` to write `package-lock.json`, then `npm audit`, and record both results (SEC-26, SEC-27).
-- [ ] T002 [P] Create `tsconfig.json`: strict, ES2022, bundler module resolution, JSON modules, unchecked index access reported.
-- [ ] T003 [P] Create `vite.config.ts`: base `./`, output `dist/`, and the Vitest settings (Node environment, `tests/unit/**/*.test.ts`).
-- [ ] T004 [P] Create `playwright.config.ts`: Chromium, project `desktop` (1920×1080, mouse) and project `phone` (844×390, touch), a plain static server for `dist/` on port 8765, video off by default. Run `npx playwright install chromium` once.
-- [ ] T005 [P] Update `.gitignore` (dependencies, test output, the map-source cache) and create the folders `src/sim`, `src/content`, `src/render`, `src/ui`, `tests/unit`, `tests/e2e`, `tests/fixtures`, `docs/verification`.
-- [ ] T006 Create `index.html` (page shell, no color literal, no inline script) and a stub `src/main.ts`, and confirm `npm run build` and `npm test` both run.
+- [X] T001 Create `package.json` with exact versions and no runtime dependency (FR-039): typescript 7.0.2, vite 8.3.7, vitest 5.1.0, @playwright/test 1.65.0, @fontsource/ibm-plex-sans 5.3.0, @fontsource/ibm-plex-mono 5.3.0, @types/node 26.6.6; scripts `dev`, `build`, `test`, `test:e2e` (builds first), `verify:dist`, `record`. Run `npm install` to write `package-lock.json`, then `npm audit`, and record both results (SEC-26, SEC-27).
+- [X] T002 [P] Create `tsconfig.json`: strict, ES2022, bundler module resolution, JSON modules, unchecked index access reported.
+- [X] T003 [P] Create `vite.config.ts`: base `./`, output `dist/`, and the Vitest settings (Node environment, `tests/unit/**/*.test.ts`).
+- [X] T004 [P] Create `playwright.config.ts`: Chromium, project `desktop` (1920×1080, mouse) and project `phone` (844×390, touch), a plain static server for `dist/` on port 8765, video off by default. Run `npx playwright install chromium` once.
+- [X] T005 [P] Update `.gitignore` (dependencies, test output, the map-source cache) and create the folders `src/sim`, `src/content`, `src/render`, `src/ui`, `tests/unit`, `tests/e2e`, `tests/fixtures`, `docs/verification`.
+- [X] T006 Create `index.html` (page shell, no color literal, no inline script) and a stub `src/main.ts`, and confirm `npm run build` and `npm test` both run.
 
 ---
 
@@ -46,19 +46,19 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Routing (C1)
 
-- [ ] T007 Copy topologies T1 and T2 and cases 1–12 from `specs/001-backbone-first-playable/spec.md` into `tests/fixtures/ospf-cases.json` as data. Expected values are typed from the spec, never produced by the engine (SC-001).
-- [ ] T008 [P] Write `src/sim/types.ts` with the records of `data-model.md`, quoting its rules in comments where a field has one: link `cost` "1 to 65535. 10 when laid"; `a` < `b`, "at most one link per pair"; `km` "whole number"; site `id` "1, 2, 3… in the order the run introduces its sites"; `nextHops` "sorted, at most `maxPaths` of them".
-- [ ] T009 [P] Write `src/sim/rng.ts` (seeded generator whose state is four whole numbers; seeded from text) and `tests/unit/rng.test.ts` (same seed gives the same sequence; whole numbers stay in range) (R13, FR-020).
-- [ ] T010 Write the failing routing tests in `tests/unit/spf.test.ts` from the fixtures: case 1 (A→C cost 20, next hops {B, D}), case 2, case 3 ({B, C, D}), case 4 (cost 19 via C; A→E 24), case 5 (B–C cut), case 6 (one route kept: B), and the route part of case 8 (R1, FR-001, FR-003).
-- [ ] T011 [P] Write the failing oracle test in `tests/unit/oracle.test.ts`: a depth-first search over every simple path on at least 300 seeded random graphs; the engine must agree on cost and first hops for every pair. The oracle shares no code with `src/sim/spf.ts` (SC-002, C1).
-- [ ] T012 Implement `computeRoutes` in `src/sim/spf.ts` until T010 and T011 pass (F1–F6). Then run the mutation check: disable the equal-cost branch, confirm tests fail, restore it, and record the counts in `docs/verification/results.md`.
-- [ ] T013 [P] Write the failing forwarding tests in `tests/unit/forwarding.test.ts`: case 7 (per-hop split on T2: S–A ½, A–T ½, S–B ½, B–C ¼, B–D ¼, C–T ¼, D–T ¼, over a multiple of 4 packets), case 3 (one third each), case 6, and hop-by-hop loop-freedom on the random graphs (R2, FR-002, F5).
-- [ ] T014 Implement `src/sim/forwarding.ts` (next-hop choice with one rotor per router and destination, in router-ID order) until T013 passes (R2, FR-002).
+- [X] T007 Copy topologies T1 and T2 and cases 1–12 from `specs/001-backbone-first-playable/spec.md` into `tests/fixtures/ospf-cases.json` as data. Expected values are typed from the spec, never produced by the engine (SC-001).
+- [X] T008 [P] Write `src/sim/types.ts` with the records of `data-model.md`, quoting its rules in comments where a field has one: link `cost` "1 to 65535. 10 when laid"; `a` < `b`, "at most one link per pair"; `km` "whole number"; site `id` "1, 2, 3… in the order the run introduces its sites"; `nextHops` "sorted, at most `maxPaths` of them".
+- [X] T009 [P] Write `src/sim/rng.ts` (seeded generator whose state is four whole numbers; seeded from text) and `tests/unit/rng.test.ts` (same seed gives the same sequence; whole numbers stay in range) (R13, FR-020).
+- [X] T010 Write the failing routing tests in `tests/unit/spf.test.ts` from the fixtures: case 1 (A→C cost 20, next hops {B, D}), case 2, case 3 ({B, C, D}), case 4 (cost 19 via C; A→E 24), case 5 (B–C cut), case 6 (one route kept: B), and the route part of case 8 (R1, FR-001, FR-003).
+- [X] T011 [P] Write the failing oracle test in `tests/unit/oracle.test.ts`: a depth-first search over every simple path on at least 300 seeded random graphs; the engine must agree on cost and first hops for every pair. The oracle shares no code with `src/sim/spf.ts` (SC-002, C1).
+- [X] T012 Implement `computeRoutes` in `src/sim/spf.ts` until T010 and T011 pass (F1–F6). Then run the mutation check: disable the equal-cost branch, confirm tests fail, restore it, and record the counts in `docs/verification/results.md`.
+- [X] T013 [P] Write the failing forwarding tests in `tests/unit/forwarding.test.ts`: case 7 (per-hop split on T2: S–A ½, A–T ½, S–B ½, B–C ¼, B–D ¼, C–T ¼, D–T ¼, over a multiple of 4 packets), case 3 (one third each), case 6, and hop-by-hop loop-freedom on the random graphs (R2, FR-002, F5).
+- [X] T014 Implement `src/sim/forwarding.ts` (next-hop choice with one rotor per router and destination, in router-ID order) until T013 passes (R2, FR-002).
 
 ### The run
 
-- [ ] T015 [P] Write the failing queue tests in `tests/unit/linkq.test.ts`: case 9 exactly (capacity 4, queue 8, 6 offered per second for 10 s gives 40 served, 8 queued, 12 dropped, with service before arrival); an idle direction keeps at most one packet of credit; utilization over the window (R4, R5, FR-007, FR-008).
-- [ ] T016 Implement `src/sim/linkq.ts` (per-direction queue, service credit, wire, served and refused windows) until T015 passes (R4, FR-007).
+- [X] T015 [P] Write the failing queue tests in `tests/unit/linkq.test.ts`: case 9 exactly (capacity 4, queue 8, 6 offered per second for 10 s gives 40 served, 8 queued, 12 dropped, with service before arrival); an idle direction keeps at most one packet of credit; utilization over the window (R4, R5, FR-007, FR-008).
+- [X] T016 Implement `src/sim/linkq.ts` (per-direction queue, service credit, wire, served and refused windows) until T015 passes (R4, FR-007).
 - [ ] T017 [P] Write the content data: `src/content/tuning.json` (the start values of `contracts/content.md`), `src/content/palette.json` (every color, by role, six-digit hex, taken from the approved mock in `mock/`), `src/content/text.json` (the briefing word for word, F1–F8 and S1–S11 in plain language, one sentence per reason code, control hints) (C6, FR-027, FR-028).
 - [ ] T018 [P] Write `tests/unit/palette.test.ts` before any drawing code exists: every color in `src/content/palette.json` is outside the green band (75° to 165°) and the red band (below 25° or above 340°) when strongly colored; no color literal appears in `src/` or `index.html` outside `palette.json`; every text color has a contrast ratio of at least 4.5 to 1 against the background roles it is used on (FR-032a, FR-037, SC-007).
 - [ ] T019 Write `tools/build-map.mjs`: read Natural Earth 1:50m populated places, land and lakes into a cache folder outside the commit, record their SHA-256 hashes, and write `src/content/region-na.json` (18 sites: three-letter codes, names, `lon`, `lat`, `weight` 1 to 3) and `src/content/coast-na.json`. The simplifier must handle closed rings (research R7; Q2).
