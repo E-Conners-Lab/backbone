@@ -56,7 +56,7 @@ npm run build      # type-check, then build into dist/
 2. Link the first three sites before their 20 seconds are up. A site with no path is dark, and its traffic is dropped.
 3. Watch where the pulses go. Brighter, thicker links carry more. Amber and striped means congested.
 4. Pause whenever you like. Every tool works while paused, and your changes take effect together when you resume.
-5. Every minute you choose a reward: 3,000 km of fiber or one capacity upgrade. Fiber cuts start after 2½ minutes.
+5. Every minute time stops and you choose a reward: 3,000 km of fiber or one capacity upgrade. Changes you make while choosing wait until you choose, as in a pause. Fiber cuts start after 2½ minutes.
 
 | Control | Action |
 | --- | --- |
@@ -140,14 +140,14 @@ python3 tools/frr_check.py   # compare the routing cases with FRR in Docker
 
 | Check | Result | Evidence / notes |
 | --- | --- | --- |
-| Spec cases 1–12 (correct, tie, boundary, cut, no path, overload, score, determinism) | Pass | `npm test`: @@UNIT@@. Expected values come from `tests/fixtures/ospf-cases.json`, typed from the spec. |
+| Spec cases 1–12 (correct, tie, boundary, cut, no path, overload, score, determinism) | Pass | `npm test`: 113 of 113 pass. Expected values come from `tests/fixtures/ospf-cases.json`, typed from the spec. |
 | Routing against an independent brute-force oracle | Pass | Every router pair on 320 seeded random graphs |
 | Routing against a real OSPF implementation | Pass | `tools/frr_check.py`: 21 of 21 compared routes match FRR 10.7.1, all adjacencies Full. Case 6's tie-break is the game's own rule and is not compared. `docs/verification/frr-check.json` |
 | Same seed and inputs give the same run | Pass | Hash equal at every step across two plays and across a replay from the command log; in the browser, two scripted runs end on the same score and the time-lapse replays to it |
 | Simulation is pure (no DOM, clock, random or renderer) | Pass | Source scan in `tests/unit/purity.test.ts` |
 | A new region is data only | Pass | The unchanged simulation runs on a trial region; one packet traced by hand in `docs/verification/hand-trace.md` |
 | Explanatory text checked against the spec and RFC 2328 | Pass | `docs/verification/text-review.md`. One reviewer, the agent that wrote the text. |
-| All 26 acceptance criteria | Pass | `npm run test:e2e`: @@E2E@@. Per-criterion table in `docs/verification/results.md`. |
+| All 26 acceptance criteria | Pass | `npm run test:e2e`: 72 pass, 4 skipped by design (each is checked at the other screen size). Per-criterion table in `docs/verification/results.md`. |
 | Full run at 1920×1080 by mouse and at 844×390 by touch | Pass | End-to-end tests with real pointer and touch events |
 | Keyboard-only play with visible focus | Pass | Chromium, desktop size |
 | Reduced motion; device setting followed | Pass | No sweep, no trails; every link, site, label and icon still drawn |
@@ -155,8 +155,9 @@ python3 tools/frr_check.py   # compare the routing cases with FRR in Docker
 | No green, no red | Pass | Every authored color is outside both hue bands. Census of screenshots in both renderers at five moments and both sizes: 0 pixels in either band. |
 | Text contrast and size; every control named | Pass | Contrast at least 4.5 to 1; no text under 16 px at 1920×1080 or 11 px at 844×390; every control on every screen has a readable name |
 | Plays offline as plain files | Pass | A whole run with the network cut; no request to another host |
+| Code review of the source, tools and tests | Done | `/code-review` at level high found 10 faults; all are fixed, and each fix that could have a test has one that fails without it. The reviewer was a second session of the same model, not a person. `docs/verification/results.md` |
 | `dist/` matches the source | @@DIST@@ | `npm run verify:dist` |
-| Seeded-run videos at both sizes | @@VIDEOS@@ | `docs/verification/run-stage-1-844x390.mp4`, `run-stage-1-1920x1080.mp4` |
+| Seeded-run videos at both sizes | Pass | `docs/verification/run-stage-1-844x390.mp4`, `run-stage-1-1920x1080.mp4`: the scripted player on seed `stage-1`, 7,302 delivered in 6:51 in both, equal to the same run in Node with no browser. Not a person's run. |
 | Fresh copy: serve `dist/`, install, test, build, end-to-end | @@FRESH@@ | From a clone of this branch in an empty folder |
 | Frame time | Recorded, not a pass | Headless Chromium on the build machine, where WebGL runs in software: 36 frames a second at 1920×1080 with WebGL, 60 with the fallback and at phone size. Main-thread work is under 1 ms a frame. This is not a phone measurement. |
 | Played by a person; a tester explains a bad cost change from the screen alone | **Not run** | Needs a person (SC-011, SC-013) |

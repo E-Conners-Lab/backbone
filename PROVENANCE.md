@@ -180,7 +180,7 @@ did not witness any of it.
 | Sessions | One. It waited for the owner from about 04:25Z to about 15:05Z on 2026-11-10. | Timestamps in the capture log |
 | Wall time | unknown | Start not recorded; the session includes the wait above |
 | Token usage / cost | unknown | Not measured by the agent |
-| Helper models and sub-agents | None so far | This session's own tool calls |
+| Helper models and sub-agents | One: the `code-review` skill ran its review in a forked session of the same model, `claude-fable-5-2` (236,865 tokens and 26 tool calls as reported by the harness). No other model and no other sub-agent. | The fork's own transcript names the model; step R19 |
 | MCP servers | The same servers as listed for v1 are connected. None has been called. | Tool names visible to the agent |
 
 ## Human prompts in the rebuild
@@ -248,3 +248,8 @@ not prompts, and are not counted.
 | Updated `docs/capture-log.md` and `docs/runbook.html` during the constitution command, which says to write only the constitution file | The owner's standing rule is that every step is logged as it happens |
 | Nothing is pushed | The owner said "commit as you go" and did not mention pushing |
 | The rebuild writes its code anew and does not copy from tag `v1-handbuilt` | `docs/PID.md` amendment 1.3 says the rebuild starts from a clean slate |
+| Changes made while a reward waits to be chosen are held as pending, as in a pause, and the spec's FR-016 now says so | Code review found that such changes were announced as done but not applied. The approved input says only that the game pauses for the choice. Marked in the spec for the owner's review. |
+| The reward choice is no longer marked as a modal dialog | It never blocked the map or the panels, so the mark was untrue for assistive technology |
+| All ten code-review findings were fixed without asking which to fix | The owner's standing rule: fix the real findings, report any left. None was left. |
+| The FRR lab was built a second time in Docker | The comparison tool was changed by two review fixes, so its earlier pass no longer vouched for it |
+| The seeded-run videos are committed to the repository | C7's evidence asks for them in the repo. The owner's choice to keep the showcase video of the hand-built v1 private is read as covering that video only (open item L7). |

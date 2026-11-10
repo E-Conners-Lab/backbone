@@ -235,3 +235,48 @@ Each row names the automated check that produced the result. "Pass" means the ch
 | SC-013 a person's run lasts 5 to 10 minutes | **Not run** | Needs a person. The scripted player's runs last 6:15 to 7:14. |
 
 Not covered by any check: browsers other than Chromium, screen readers, a real phone, and a person playing at all.
+
+## Code review (T068, 2026-11-10T17:27Z)
+
+`/code-review` at level high over `src`, `tools` and `tests`, run by a forked reviewer: a second session of the same model that had not written the code, not a person. It returned ten findings. All ten were judged real and all ten are fixed; nothing was left.
+
+| # | Finding | Fix | Check that fails without the fix |
+| --- | --- | --- | --- |
+| 1 | `Camera.toScreen` had no guard where the tilted map meets the eye. Zoomed far in, a point far south got a negative or infinite scale: links drawn mirrored, and a negative radius that throws in the Canvas 2D renderer and stops the frame loop. | Points are held at 75% of the way to the eye, which is always far below the view; the same guard at the horizon for `toMap`. | `tests/unit/camera.test.ts` (confirmed by taking the fix out) |
+| 2 | While a reward waited, the map stayed usable. Changes were announced as done but only applied with the choice; two links could both be accepted against one budget; three presses of "+" moved a cost by one. | Time standing still is one state for commands, by pause or by reward: changes are checked against the projected world, shown as pending, and applied in the step that starts time again, before the choice. The dialog says so and no longer claims to be modal. | `tests/unit/game.test.ts` (confirmed); `tests/e2e/us2-operate.spec.ts` FR-016 at both sizes |
+| 3 | A command sent in the instant before a pause was not in the pending projection, so link IDs given while paused could differ from those given on resume, and a pending cost could land on the wrong link. | On pause, commands not yet applied join the pending changes. | `tests/unit/game.test.ts` (confirmed) |
+| 4 | `tools/frr_check.py` exited 1, which means "a case differs", for failures that are no verdict: Docker missing, output that is not JSON, a missing field. | Each becomes "no valid verdict" and exit 2; anything unexpected at the top level does too. | Run with Docker off the PATH: prints no valid verdict, exits 2 |
+| 5 | The same tool waited only for the expected cost before reading next hops. Where a change keeps the cost and moves the next hops (case 3), it could read before FRR had recomputed and fail a correct model. | It waits for everything it then compares. | Rerun: pass, 21 of 21, output identical to the first run |
+| 6 | The link panel overwrote the place focus should return to when a tool key re-aimed the open panel, so closing it dropped focus to the page. | The place is recorded only when the panel opens. | `tests/e2e/us4-access.spec.ts` AC17 (confirmed) |
+| 7 | The camera measured the HUD's height before the HUD was filled, so on a narrow view the framing could still put a site under it. | The HUD is filled first. | `us4-access` FR-030: all sites between the bars at both sizes |
+| 8 | The link-length rule existed in four places, and the scripted player had its own copy of `findLink`. | One exported `linkLength`; the copies are gone. | Existing tests |
+| 9 | The full-queue colour cue assumed a queue of 8, and the video tool assumed 20 steps a second. | Both read the tuning. | Existing tests; the video tool's printed time |
+| 10 | Three capture tools started a file server on a random port and waited 700 ms. On a busy port the browser would load whatever was listening there, so the hero art or a video could show the wrong page. | `tools/serve-dist.mjs`: a free port from the system, wait for the answer, and the answer must equal this build's `dist/index.html`. | Used for the screenshots and the videos recorded after it |
+
+What this review is not: a person's review, a security audit, or a review of the specification documents.
+
+## Videos (T062, SC-005; recorded 2026-11-10T17:56Z from the final build)
+
+`npm run record` plays the scripted player on seed `stage-1` in the built game, with the WebGL renderer, from the start to game over and through the time-lapse, at 4 times real speed. The speed is a multiple of the same fixed step, so it is the same run.
+
+| | 844×390 (touch device profile) | 1920×1080 |
+| --- | --- | --- |
+| File | `run-stage-1-844x390.mp4` | `run-stage-1-1920x1080.mp4` |
+| Size, length | 1,952,961 bytes, 114 s, H.264 | 5,241,329 bytes, 115 s, H.264 |
+| SHA-256 | `e5998bfe8f3184a41dc7b46c354f663d39f777025528166840a216997497b6cf` | `0c00443de2380c6dd99a647d4f694c21595346e7a1326107dc04c73392b655d8` |
+| Delivered | 7,302 | 7,302 |
+| Time survived | 6:51 (8,239 steps) | 6:51 (8,239 steps) |
+| Dropped: full queue, cut, no route | 108, 14, 0 | 108, 14, 0 |
+| Commands in the log | 28 | 28 |
+| Score reached by the time-lapse | 7,302 | 7,302 |
+| Page errors | none | none |
+
+**Second, independent check.** The same seed played by the same scripted player in Node, with no browser and no renderer (`node tools/run-ts.mjs tools/bot-runs.ts stage-1`): 6:51, 7,302 delivered, drops 108, 14 and 0. All three runs agree.
+
+**Looked at.** One frame from late in the phone video (6:19) and two from the desktop video (3:59 and the last second) were opened and read: the HUD numbers match the table, all twelve sites sit between the HUD and the control bar, congested links are amber and dashed with a warning icon, and the game-over card shows the same score, time, seed and drop counts.
+
+**Result: SC-005 pass** for the scripted player. It is not a person's run.
+
+Two things seen in the frames and left as they are: on the game-over screen the result card covers the western sites while the time-lapse plays behind it, and a cost label can sit partly under a site's name where a link leaves the site at a shallow angle.
+
+The first recording, from build `68c4588`, gave the same numbers. It showed a site under the control bar at phone size, which led to the framing fix; both videos were then recorded again and the first pair was replaced.

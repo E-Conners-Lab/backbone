@@ -243,7 +243,7 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 - **FR-013 (Q5 Removing a link)**: The player can remove a link that is up. Removal returns the link's fiber in full, forfeits the upgrades spent on it, and drops the packets on it or queued for it (FR-009b). A link that is cut MUST NOT be removable until it is repaired.
 - **FR-014 (Capacity upgrades)**: Capacity comes in tiers. Applying an upgrade spends one upgrade from the player's stock and raises the link one tier in both directions. Its cost is unchanged (S6). Without an upgrade in stock, or on a link at the top tier, the attempt changes nothing.
 - **FR-015 (S6 Default cost)**: A new link has cost 10.
-- **FR-016 (R10 Rewards)**: At fixed intervals of simulated time (*tunable*) the game pauses and the player chooses one of the offered rewards. In v1 every offer holds the same two choices: a fixed amount of fiber (*tunable*), or one capacity upgrade. The offer therefore does not vary with the seed, and stays deterministic. The choice has no time limit.
+- **FR-016 (R10 Rewards)**: At fixed intervals of simulated time (*tunable*) the game pauses and the player chooses one of the offered rewards. In v1 every offer holds the same two choices: a fixed amount of fiber (*tunable*), or one capacity upgrade. The offer therefore does not vary with the seed, and stays deterministic. The choice has no time limit. While the choice is open the tools still work, and changes made then are pending, as in a pause (FR-024): they take effect together with the choice.
 - **FR-017 (R11 Fiber cuts)**: At times decided by the seed, one link that is up is cut for a period and then restored. The cut and the restore each trigger FR-001.
 - **FR-018 (Sites)**: A run starts with a few sites of the region and gains more over time (*tunable* counts and interval), as decided by the seed. A new site is marked as new and neither sends nor receives traffic until its grace period (*tunable*) ends. Router IDs are whole numbers given in the order the run introduces its sites, starting at 1.
 
@@ -380,6 +380,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 - The game pauses when its page is hidden (FR-024).
 - A typed seed is 1 to 24 letters, digits or hyphens (FR-022), and five best scores are kept (FR-023).
 - A change made while paused is checked when it is made, against the state the earlier pending changes will produce.
+- A change made while a reward waits to be chosen is treated the same way: checked when made, shown as pending, and applied together with the choice (FR-016). The input says only that the game pauses for the choice. Set by the build agent after the code review of 2026-11-10; it waits for the owner's review.
 - Automated checks run in Chromium. Other browsers are not verified in v1 and are listed as a limit in the README (clarified 2026-11-10).
 - The contrast ratio and the two minimum text sizes in FR-037 were set by the build agent during the analysis of 2026-11-10 so that "high contrast and large type" can be checked. The sizes follow the base unit of the mock the owner approved. They wait for the owner's review.
 
