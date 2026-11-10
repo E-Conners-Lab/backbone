@@ -1,0 +1,91 @@
+# Backbone · Capture log
+
+Kept from the first step. Times are UTC. Real addresses and secrets stay out. A claim that later proves wrong is marked **corrected**, not deleted.
+
+## Timeline
+
+| Time (UTC) | Event |
+| --- | --- |
+| 2026-11-09, time not recorded | Owner's brief received. Session start time was not captured. |
+| 2026-11-09, before 22:52 | Arcade template fetched; local search for the workshop repo found nothing; owner chose a GitHub clone; StarterKit and Per-Hop Works example read |
+| 2026-11-09T22:52:04Z | RFC 2328, 2991, 2992 downloaded and hashed; tool versions recorded |
+| 2026-11-09T22:58:46Z | Milestone 1: constitution, specification, plan, PID, provenance, README and this log drafted |
+| 2026-11-09, time not recorded | Owner approved the spec with every default and asked for the mock |
+| 2026-11-09T23:10:51Z | Milestone 2: static visual mock at 1920×1080 and 844×390 ready |
+| 2026-11-09, time not recorded | Owner asked to see it running; motion added to the mock. Owner then approved the mock and started the build. |
+| 2026-11-09T23:50:04Z | Build started: dependencies installed |
+| 2026-11-09T23:52Z | Slice 1 done: routing engine, 13 tests, mutation check |
+| 2026-11-09T23:56Z | Slice 2 done: full simulation, 28 tests, tuning |
+| 2026-11-10T00:05Z | Slice 3 done: first playable build in a browser (2D renderer) |
+| 2026-11-10T00:08Z | Slice 4 done: WebGL renderer with bloom |
+| 2026-11-10T00:17Z | Slices 5 and 6: hero image, end-to-end tests, first videos |
+| 2026-11-10T00:40Z | FRR comparison passes on the third attempt |
+| 2026-11-10T00:44Z | Code review findings fixed |
+| 2026-11-10T00:48:08Z | Milestone 3: v1 built, all checks rerun, videos re-recorded, records updated |
+
+## Steps and results
+
+| # | Step | Result |
+| --- | --- | --- |
+| 1 | Fetch `ARCADE.md` from the Arcade site | Done. Relayed through the fetch tool's summarizing model, so not byte-exact. |
+| 2 | Find `NAF_AC6` locally | Not found |
+| 3 | Ask the owner for the path | Owner chose: clone from GitHub |
+| 4 | Shallow-clone the workshop repo to the session scratch folder | Done, commit `b77da71` |
+| 5 | Read StarterKit files, Per-Hop Works `ARCADE.md`, lab guide | Done |
+| 6 | Download and read RFC 2328 and RFC 2991 sections | Done; hashes in `PROVENANCE.md` |
+| 7 | Load the owner's project-initiation standard; write `docs/PID.md` | Done |
+| 8 | Write constitution, specification, plan | Done; approved by the owner with all defaults |
+| 9 | Static visual mock, then with motion | Done; approved by the owner |
+| 10 | Local repo housekeeping (D2): branch `main`, `.gitignore`, `.idea/` unstaged, `pyproject.toml` removed | Done. No commit, no remote. |
+| 11 | Install pinned dev dependencies; `npm audit` | 0 vulnerabilities |
+| 12 | Slice 1: fixtures, oracle, `spf.ts`, `forwarding.ts` | 13 tests pass; mutation check fails 7 as intended |
+| 13 | Slice 2: `linkq.ts`, `world.ts`, `replay.ts`, `bot.ts`; tuning | 28 tests pass |
+| 14 | Coastline from Natural Earth | 38 land rings and 64 lake rings, 28 KB |
+| 15 | Slice 3: camera, scene, 2D renderer, HUD, input, main loop | Builds; runs with no page errors |
+| 16 | Slice 4: WebGL2 renderer with two-level bloom | Renders; hue-preserving mix after amber looked yellow |
+| 17 | Slice 5: hero image, scores, time-lapse, reduced motion, model notes, fonts | Done |
+| 18 | Slice 6: end-to-end tests, videos, `dist/` drift check | 9 end-to-end tests pass, 1 skipped by design |
+| 19 | FRR comparison | Pass on attempt 3; attempts 1 and 2 gave no valid verdict |
+| 20 | Load the owner's secure-build standard; write the checklist | Done; three exceptions await the owner |
+| 21 | Code review at level `medium` | 10 findings, all fixed |
+| 22 | Rerun everything; re-record videos | 33 unit and 9 end-to-end tests pass; `dist/` matches a fresh build |
+| 23 | Write README, `ARCADE.md` (consent false), `tasks.md`, `LICENSE`; update provenance and this log | Done |
+| 24 | Open the game for the owner | Done |
+| 25 | Create the GitHub repo, commit, push | **Not done.** Waiting for the owner to ask. |
+
+## Gotchas
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| The workshop repo was not on the machine | It had not been cloned | Asked the owner; cloned read-only outside the project |
+| The StarterKit templates assume a quiz | Written for a 60-minute quiz-style game | Kept the seven principles; listed each adaptation in the constitution |
+| Mock text rendered in italics | The `ui-monospace` font stack resolved to an italic face in headless Chrome | Named Menlo first in the mock; the game self-hosts IBM Plex |
+| The coastline build produced nothing | The simplifier measured distance from a zero-length chord, because a closed ring starts and ends on the same point | Measure from the point itself when the chord has no length |
+| The scripted player lost in under two minutes, to "no route" drops | New sites arrived faster than fiber, and an early cut partitioned a sparse network | More starting fiber, slower site arrivals, first cut at 2:30, shorter cuts, and a fiber reserve in the bot |
+| A cut test found no packets on the link | Its two test sites were 157 km apart, a two-step flight | Moved the test sites apart. No expected value changed. |
+| Keyboard "Edit" did not move focus into the cost field | The field's panel was still hidden until the next frame | Show the panel before focusing. The same bug was later found in "About". |
+| Amber links looked yellow | Additive bloom clipped each color channel separately | Scale the color down as a whole so hue is kept |
+| FRR costs all read 1 lower than the spec | The comparison script subtracted an assumed loopback cost; FRR advertises the loopback at metric 0 | Read the metric from FRR's own router-LSA |
+| FRR disagreed with the spec on five routes | One adjacency in the lab never formed, so FRR was routing a different topology | Health gate: no comparison unless all adjacencies are Full and router IDs are right. Native arm64 image instead of an emulated one. |
+| "Three equal paths carry a third each" is a tempting but wrong model | Forwarding is hop by hop | Spec case 7 |
+
+## Questions and answers
+
+| Question | Asked by | Answer |
+| --- | --- | --- |
+| Where is the `NAF_AC6` repo? | Agent | Owner: clone it from GitHub |
+| Spec questions Q1–Q9 and decisions D1–D6 | Agent | Owner: go with the defaults |
+| Can I see it running? | Owner | Not the game at that point; the mock was given motion |
+| Is the mock approved? Which typeface? | Agent | Owner: approved, start the build. No typeface named, so the proposed IBM Plex was used. |
+| Open the game when done | Owner | Done |
+| `ARCADE.md` creator fields and consent | Agent | **Open.** Only the owner can fill these. |
+| Three secure-build exceptions (no secret scanner, no CI scan, no signing or SBOM) | Agent | **Open.** Need the owner's acceptance. |
+
+## Open items
+
+- Owner fills the creator fields in `ARCADE.md` and decides on `consent_to_publish`.
+- Owner decides when to create the GitHub repo and commit. `ARCADE.md` `repo` is empty until then.
+- Frame rate on a real mid-range phone has not been measured.
+- Nobody has played it by hand. Run length for people is unknown.
+- In FRR attempt 2, two routers reported unexpected router IDs while being probed. The cause was not found. Later runs verify router IDs before comparing.
+- The session start time and wall time are not recorded.
