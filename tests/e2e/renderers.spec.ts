@@ -15,12 +15,18 @@ async function withoutWebGl(page: Page): Promise<void> {
   });
 }
 
-/** Pauses, then brings the run to an exact step, so two pages can be compared like for like. */
+/**
+ * Brings the run to an exact step and pauses it there, so two pages can be compared like for
+ * like. Both happen in one call into the page, so no frame can add a step in between. Time
+ * does not move while paused, by the test hook either, so the pause comes last.
+ */
 async function freezeAt(page: Page, step: number): Promise<void> {
-  await page.locator("#btn-pause").click();
+  await page.evaluate((target) => {
+    window.__backbone.advance(target - window.__backbone.state().step);
+    document.getElementById("btn-pause")!.click();
+  }, step);
   await expect.poll(async () => (await state(page)).paused).toBe(true);
   if (await page.locator("#inspector").isVisible()) await page.locator("#inspector-close").click();
-  await page.evaluate((target) => window.__backbone.advance(target - window.__backbone.state().step), step);
   await frame(page);
   expect((await state(page)).step).toBe(step);
 }

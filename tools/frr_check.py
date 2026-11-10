@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -492,11 +493,13 @@ def main() -> int:
         # LabError is the expected way to have no verdict. Anything else that goes wrong while
         # building or reading the lab is no verdict either: status 1 means a case differs, and
         # must never be the result of a comparison that was not made.
-        reason = (
-            str(error)
-            if isinstance(error, LabError)
-            else f"{type(error).__name__}: {error}"
-        )
+        if isinstance(error, LabError):
+            reason = str(error)
+        else:
+            # A fault in this tool or in the fixture, not in the lab: say where, on stderr,
+            # so that it is not read as "Docker unavailable".
+            reason = f"unexpected {type(error).__name__}: {error}"
+            traceback.print_exc(file=sys.stderr)
         print(
             json.dumps(
                 {"verdict": "no valid verdict", "reason": reason, "rows": rows},

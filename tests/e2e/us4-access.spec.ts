@@ -149,6 +149,16 @@ test("AC17: the game can be played by keyboard alone, with focus visible through
   await press("Escape");
   await expect(page.locator("#linkpanel")).toBeHidden();
   expect(await focused()).toMatchObject({ within: "link-rows", visible: true }); // focus returns to where it came from
+  // Opened from one row and then aimed at another link from that link's own row, the panel
+  // returns focus to the second row, not to the first (found in the second review).
+  await press("Enter");
+  await expect(page.locator("#linkpanel")).toBeVisible();
+  await page.locator("#link-rows button").nth(1).focus();
+  await press("Enter");
+  await expect(page.locator("#linkpanel")).toBeVisible();
+  await press("Escape");
+  await expect(page.locator("#linkpanel")).toBeHidden();
+  expect(await page.evaluate(() => document.activeElement === document.querySelectorAll("#link-rows button")[1])).toBe(true);
 
   // Number keys select tools from anywhere outside a text field.
   await press("3");

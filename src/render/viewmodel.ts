@@ -5,7 +5,7 @@
 import type { Coast } from "../content/load";
 import type { Link, LinkId, SiteId, World } from "../sim/types";
 import { capacityOf, dirUtilization, isDark, linkLength, loadState, presentSites, type LoadState } from "../sim/world";
-import type { Camera } from "./camera";
+import type { Camera, ScreenPoint } from "./camera";
 
 export type LinkLook = LoadState | "cut";
 
@@ -110,7 +110,7 @@ export interface ViewState {
   unit: number;
   paused: boolean;
   reducedMotion: boolean;
-  /** The world as it will be once pending changes apply, while paused. */
+  /** The world as it will be once pending changes apply, while there are any. */
   projected: World | null;
   drag: { from: SiteId; x: number; y: number } | null;
   focusSite: SiteId | null;
@@ -128,15 +128,56 @@ const GRID_KM = 400;
 const GRID_DEPTH = 0.9;
 const COAST_DEPTH = 0.985;
 
+/** A link's scale is the mean of its ends'. An end far below the view must not make the part in view thick. */
+const END_SCALE_CAP = 1.5;
+
+/**
+ * Projects closed rings of map points. A ring that crosses the camera's southern limit is
+ * cut along the limit first, so that its edges in view keep their true direction; the cut
+ * itself lies far below the view. A ring wholly north of the limit comes out point for point.
+ */
 function polylines(rings: number[][], camera: Camera, depth: number): number[][] {
+  const limit = camera.southLimit(depth);
   return rings.map((ring) => {
     const out: number[] = [];
-    for (let i = 0; i < ring.length; i += 2) {
-      const p = camera.toScreen(ring[i]!, ring[i + 1]!, depth);
-      out.push(p.x, p.y);
+    const count = ring.length / 2;
+    for (let i = 0; i < count; i++) {
+      const x = ring[i * 2]!;
+      const y = ring[i * 2 + 1]!;
+      const before = (i + count - 1) % count;
+      const px = ring[before * 2]!;
+      const py = ring[before * 2 + 1]!;
+      if (y >= limit !== py >= limit) {
+        const crossing = camera.toScreen(px + ((x - px) * (limit - py)) / (y - py), limit, depth);
+        out.push(crossing.x, crossing.y);
+      }
+      if (y >= limit) {
+        const p = camera.toScreen(x, y, depth);
+        out.push(p.x, p.y);
+      }
     }
     return out;
   });
+}
+
+interface MapPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * Projects the map segment between two points. An end beyond the camera's southern limit is
+ * cut back to the limit along the segment, so that the part in view keeps its true
+ * direction; the cut end is far below the view. With both ends beyond, nothing is in view
+ * and the ends stay where the camera holds them.
+ */
+function span(camera: Camera, a: MapPoint, b: MapPoint): { a: ScreenPoint; b: ScreenPoint; cut: boolean } {
+  const limit = camera.southLimit();
+  const trim = (p: MapPoint, q: MapPoint): MapPoint =>
+    p.y >= limit || q.y < limit ? p : { x: p.x + ((q.x - p.x) * (limit - p.y)) / (q.y - p.y), y: limit };
+  const from = trim(a, b);
+  const to = trim(b, a);
+  return { a: camera.toScreen(from.x, from.y), b: camera.toScreen(to.x, to.y), cut: from !== a || to !== b };
 }
 
 function gridLines(camera: Camera, depth: number): number[][] {
@@ -206,15 +247,18 @@ export function buildScene(world: World | null, view: ViewState): Scene {
 
   const projected = view.projected;
   const later = (id: LinkId): Link | undefined => projected?.links.find((l) => l.id === id);
+  /** Links with an end cut at the camera's limit: their pulses are placed from the map, not along the screen line. */
+  const cutLinks = new Set<LinkId>();
   const sceneLink = (link: Link, pending: SceneLink["pending"]): SceneLink | null => {
-    const a = at.get(link.a);
-    const b = at.get(link.b);
-    if (!a || !b) return null;
+    if (!at.has(link.a) || !at.has(link.b)) return null;
+    const ends = span(camera, world.sites[link.a - 1]!, world.sites[link.b - 1]!);
+    if (ends.cut) cutLinks.add(link.id);
+    const { a, b } = ends;
     const utilAB = pending === "new" ? 0 : dirUtilization(world, link, 0);
     const utilBA = pending === "new" ? 0 : dirUtilization(world, link, 1);
     const load = Math.min(1, Math.max(utilAB, utilBA));
     const look: LinkLook = !link.up ? "cut" : pending === "new" ? "nominal" : loadState(world, link);
-    const s = (a.s + b.s) / 2;
+    const s = (Math.min(a.s, END_SCALE_CAP) + Math.min(b.s, END_SCALE_CAP)) / 2;
     const future = pending === null ? later(link.id) : undefined;
     return {
       id: link.id,
@@ -256,12 +300,18 @@ export function buildScene(world: World | null, view: ViewState): Scene {
       const nx = (-(ty - fy) / length) * 2.2 * item.s;
       const ny = ((tx - fx) / length) * 2.2 * item.s;
       const trail = still ? 0 : Math.min(26 * item.s, length * 0.25);
+      // Where a link is cut at the camera's limit, the screen line is only part of the link,
+      // so a packet's place is taken from the map and projected.
+      const exact = cutLinks.has(link.id);
+      const from = world.sites[(d === 0 ? link.a : link.b) - 1]!;
+      const to = world.sites[(d === 0 ? link.b : link.a) - 1]!;
       for (const packet of link.dirs[d]!.wire) {
-        const span = Math.max(1, packet.t1 - packet.t0);
-        const f = Math.min(1, Math.max(0, (world.step + view.alpha - packet.t0) / span));
-        const x = fx + (tx - fx) * f + nx;
-        const y = fy + (ty - fy) * f + ny;
-        const back = Math.min(trail, length * f);
+        const travel = Math.max(1, packet.t1 - packet.t0);
+        const f = Math.min(1, Math.max(0, (world.step + view.alpha - packet.t0) / travel));
+        const on = exact ? camera.toScreen(from.x + (to.x - from.x) * f, from.y + (to.y - from.y) * f) : { x: fx + (tx - fx) * f, y: fy + (ty - fy) * f };
+        const x = on.x + nx;
+        const y = on.y + ny;
+        const back = Math.min(trail, exact ? Math.hypot(on.x - fx, on.y - fy) : length * f);
         scene.pulses.push({
           x,
           y,

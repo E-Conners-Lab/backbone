@@ -105,6 +105,23 @@ describe("camera (FR-029: touch targets stay right on the tilted map)", () => {
     }
   });
 
+  it("says where its southern limit is: north of it a point is drawn truly, at it the scale is 4", () => {
+    const c = camera(844, 390);
+    c.zoom = 1.2;
+    const limit = c.southLimit();
+    expect(limit).toBeLessThan(c.cy);
+    expect(c.toScreen(c.cx + 300, limit).s).toBeCloseTo(4, 9);
+    // Just north of the limit the projection still inverts exactly.
+    const p = c.toScreen(c.cx + 300, limit + 1);
+    const back = c.toMap(p.x, p.y);
+    expect(back.x).toBeCloseTo(c.cx + 300, 6);
+    expect(back.y).toBeCloseTo(limit + 1, 6);
+    // South of it the point is held: it is drawn where the limit is, not where it is.
+    expect(c.toScreen(c.cx + 300, limit - 500)).toEqual(c.toScreen(c.cx + 300, limit));
+    // A layer with parallax has its own limit.
+    expect(c.toScreen(0, c.southLimit(0.9), 0.9).s).toBeCloseTo(4, 9);
+  });
+
   it("hit targets are 44 CSS pixels across", () => {
     expect(HIT_RADIUS * 2).toBeGreaterThanOrEqual(44);
     expect(distanceToSegment(5, 10, 0, 0, 10, 0)).toBeCloseTo(10, 9);

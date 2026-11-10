@@ -32,6 +32,9 @@ export function updateHud(game: Game): void {
   }
 }
 
+const pendingLine = (n: number, when: string): string =>
+  `${n} change${n === 1 ? "" : "s"} pending; ${n === 1 ? "it takes" : "they take"} effect together ${when}.`;
+
 /** The line under the HUD that says what state the game is in. */
 export function updateStatus(game: Game, siteCode: (id: number) => string): void {
   const status = el("status");
@@ -40,10 +43,9 @@ export function updateStatus(game: Game, siteCode: (id: number) => string): void
     text = `Link from ${siteCode(game.linkStart)}: choose the far end, or press Escape.`;
   } else if (game.paused) {
     const n = game.pending.length;
-    text = n === 0 ? "Paused. Every tool works. Space resumes." : `Paused. ${n} change${n === 1 ? "" : "s"} pending; ${n === 1 ? "it takes" : "they take"} effect together on resume.`;
-  } else if (game.world.rewardPending && game.pending.length > 0) {
-    const n = game.pending.length;
-    text = `${n} change${n === 1 ? "" : "s"} pending; ${n === 1 ? "it takes" : "they take"} effect together when you choose a reward.`;
+    text = n === 0 ? "Paused. Every tool works. Space resumes." : `Paused. ${pendingLine(n, "on resume")}`;
+  } else if (game.world.rewardPending && !game.rewardChosen && game.pending.length > 0) {
+    text = pendingLine(game.pending.length, "when you choose a reward");
   }
   setText(status, text);
   status.hidden = text === "";

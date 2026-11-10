@@ -50,10 +50,11 @@ export async function serveDist() {
     if (exit !== null) throw new Error(`the file server for dist/ stopped (${exit}) before it answered on port ${port}`);
     let body = null;
     try {
-      const response = await fetch(url);
+      // A port that accepts the connection and never answers must not outlast the deadline.
+      const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
       if (response.ok) body = await response.text();
     } catch {
-      // Not listening yet.
+      // Not listening yet, or no answer in time.
     }
     if (body !== null) {
       // The server this tool started must be the one that answered, and with this build.

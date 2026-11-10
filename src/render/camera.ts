@@ -31,10 +31,22 @@ export class Camera {
   /**
    * The tilted map plane meets the eye at a finite distance south of the view's centre, and
    * its horizon at a finite distance north. Past either, the perspective division gives an
-   * infinite or negative scale. Points are held this share of the way there instead, which
-   * is always far off the bottom or the top of the view, so nothing drawn changes.
+   * infinite or negative scale. A point is held this share of the way there instead, which
+   * is always far off the bottom of the view. A held point is not where the map point truly
+   * is, so a line that crosses the limit must be cut at `southLimit` before it is drawn, or
+   * the part of it in view would point the wrong way.
    */
   private static readonly LIMIT = 0.75;
+
+  /** How far south of the view's centre, in pixels on the map plane, the limit lies. */
+  private get nearest(): number {
+    return (Camera.LIMIT * this.distance) / Math.sin(this.tilt);
+  }
+
+  /** The southernmost map y, in km, that `toScreen` draws where it truly is, for a layer at `depth`. */
+  southLimit(depth = 1): number {
+    return this.cy * depth - this.nearest / this.zoom;
+  }
 
   resize(width: number, height: number): void {
     this.width = Math.max(1, width);
@@ -60,8 +72,7 @@ export class Camera {
   /** Map km to screen pixels. `depth` shifts a layer for parallax: 1 moves with the map. */
   toScreen(x: number, y: number, depth = 1): ScreenPoint {
     const u = (x - this.cx * depth) * this.zoom;
-    const nearest = (Camera.LIMIT * this.distance) / Math.sin(this.tilt);
-    const v = Math.min(-(y - this.cy * depth) * this.zoom, nearest);
+    const v = Math.min(-(y - this.cy * depth) * this.zoom, this.nearest);
     const scale = this.distance / (this.distance - v * Math.sin(this.tilt));
     return {
       x: this.width / 2 + u * scale,

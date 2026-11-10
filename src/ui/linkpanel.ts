@@ -52,9 +52,11 @@ export class LinkPanel {
   open(id: LinkId, tool: Tool): void {
     const game = this.game();
     if (!game) return;
-    // Focus goes back to where it was before the panel opened. A tool key pressed inside the
-    // open panel re-aims it, and must not make one of the panel's own controls that place.
-    if (this.linkId === null) this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // Focus goes back to where it was when the panel was opened or aimed at another link.
+    // A tool key pressed inside the open panel re-aims it too, and must not make one of the
+    // panel's own controls, which are about to be hidden, that place.
+    const from = document.activeElement;
+    if (from instanceof HTMLElement && !el("linkpanel").contains(from)) this.returnFocus = from;
     this.linkId = id;
     game.focusLink = id;
     setText(el("lp-message"), "");

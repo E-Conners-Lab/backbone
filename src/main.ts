@@ -99,9 +99,10 @@ function boot(): void {
   const fitCamera = (): void => {
     const px = game ? game.world.sites.map((s) => s.x) : xs;
     const py = game ? game.world.sites.map((s) => s.y) : ys;
-    // Leave the HUD at the top and the controls at the bottom out of the framing, so no site hides behind them.
-    const top = el("hud").hidden || !switches.hud ? 0 : el("hud").offsetHeight;
-    const bottom = el("controls").hidden || !switches.hud ? 0 : el("controls").offsetHeight;
+    // Leave the HUD at the top and the controls at the bottom out of the framing, so no site
+    // hides behind them. A bar that is not shown has no height.
+    const top = el("hud").offsetHeight;
+    const bottom = el("controls").offsetHeight;
     camera.fit(Math.min(...px) - 250, Math.min(...py) - 250, Math.max(...px) + 250, Math.max(...py) + 250, top, bottom);
   };
   const resize = (): void => {
@@ -120,6 +121,7 @@ function boot(): void {
   const linkName = (link: Link): string => `${code(link.a)}–${code(link.b)}`;
   const event = (key: string, values: Record<string, string | number>): string => fill(text.events[key] ?? key, values);
   const reasonText = (reason: Reason): string => text.reasons[reason] ?? reason;
+  const appliedTogether = (count: number): string => `${count} pending change${count === 1 ? "" : "s"} applied together.`;
 
   // --- the run --------------------------------------------------------------------------
 
@@ -272,7 +274,7 @@ function boot(): void {
     const waiting = game.pending.length;
     game.setPaused(pausing);
     if (pausing && window.innerWidth >= 900 && !inspector.isOpen) inspector.open(false);
-    if (!pausing && waiting > 0) say(`${waiting} pending change${waiting === 1 ? "" : "s"} applied together.`);
+    if (!pausing && waiting > 0) say(appliedTogether(waiting));
     refreshUi();
   };
 
@@ -320,7 +322,7 @@ function boot(): void {
       return;
     }
     const taken = choice === "fiber" ? `Reward taken: ${km(tuning.rewardFiberKm)} of fiber.` : "Reward taken: one capacity upgrade.";
-    say(waiting > 0 ? `${taken} ${waiting} pending change${waiting === 1 ? "" : "s"} applied together.` : taken);
+    say(waiting > 0 ? `${taken} ${appliedTogether(waiting)}` : taken);
   });
   let pausedForAbout = false;
   const screens = new Screens(text, tuning.stepsPerSec, {
@@ -382,6 +384,11 @@ function boot(): void {
     }
   });
   window.addEventListener("resize", resize);
+  // The framing leaves room for the HUD as measured. When a typeface arrives after that, the
+  // HUD can wrap differently, so the map is framed again unless the player has moved it.
+  document.fonts.addEventListener("loadingdone", () => {
+    if (!userMoved) fitCamera();
+  });
 
   // --- drawing and the frame loop -------------------------------------------------------
 
@@ -389,7 +396,8 @@ function boot(): void {
     if (!game || screen === "welcome") return;
     updateHud(game);
     updateStatus(game, code);
-    reward.sync(screen === "run" && game.world.rewardPending && !game.bot);
+    // Once a choice is made the dialog goes at once, though the choice applies at the next step.
+    reward.sync(screen === "run" && game.world.rewardPending && !game.rewardChosen && !game.bot);
     if (inspector.isOpen) inspector.refresh();
     if (linkPanel.isOpen) linkPanel.refresh();
     if (screen === "over") screens.setLapseNote(lapseNote());

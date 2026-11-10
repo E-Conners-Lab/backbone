@@ -19,12 +19,15 @@ const seed = /^[A-Za-z0-9-]{1,24}$/.test(process.argv[2] ?? "") ? process.argv[2
 const step = Number(process.argv[3] ?? 5400);
 const WIDTH = 1600;
 const HEIGHT = 900;
-const work = mkdtempSync(join(tmpdir(), "backbone-card-"));
-const png = join(work, "frame.png");
 const out = join(root, "public", "hero.webp");
-
+// The server comes first: if it cannot start, nothing has been made that needs clearing away.
+// Everything after it is inside the try, so the server and the folder never outlive a failure.
 const server = await serveDist();
+let work = null;
+
 try {
+  work = mkdtempSync(join(tmpdir(), "backbone-card-"));
+  const png = join(work, "frame.png");
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1 });
   await page.goto(`${server.url}?test=1&autostart=1&bot=1&hud=0&seed=${seed}`);
@@ -50,5 +53,5 @@ try {
   );
 } finally {
   server.stop();
-  rmSync(work, { recursive: true, force: true });
+  if (work) rmSync(work, { recursive: true, force: true });
 }

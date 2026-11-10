@@ -211,3 +211,31 @@ test("FR-024: the game pauses itself when its page is hidden", async ({ page }, 
   await expect(page.locator("#messages")).toContainText("Paused while the page was hidden.");
   await expect(page.locator("#btn-pause")).toHaveText("Resume");
 });
+
+test("AC14: a pending link's options stay open across resume and show the link once it is laid", async ({ page }, info) => {
+  // Found in code review: between resume and the step that applies the pending changes, a
+  // pending link was in neither the world nor the plan, so its options closed by themselves.
+  await open(page, "autostart=1&seed=stage-1");
+  await lay(page, info, 1, 2);
+  await playTo(page, info, 60, { connect: false });
+  await pause(page, true);
+  if (await page.locator("#inspector").isVisible()) await page.locator("#inspector-close").click();
+  await drag(page, info, await site(page, 2), await site(page, 3));
+  await expect.poll(async () => (await links(page)).filter((l) => l.pending === "new").length).toBe(1);
+  const pendingLink = (await links(page)).find((l) => l.pending === "new")!;
+
+  await tap(page, info, pendingLink);
+  await expect(page.locator("#linkpanel")).toBeVisible();
+  await expect(page.locator("#lp-state")).toHaveText("Pending: this link is laid when play resumes.");
+  const title = await page.locator("#lp-title").textContent();
+
+  // Resume by key, so that nothing else is touched.
+  await page.locator("#btn-pause").press("Enter");
+  await expect.poll(async () => (await state(page)).paused).toBe(false);
+  await expect.poll(async () => (await state(page)).pending).toBe(0);
+  await expect(page.locator("#linkpanel")).toBeVisible();
+  await expect(page.locator("#lp-title")).toHaveText(title!);
+  await expect(page.locator("#lp-state")).toContainText("Up, ");
+  const laid = (await links(page)).find((l) => l.id === pendingLink.id)!;
+  expect(laid.pending).toBeNull();
+});

@@ -8,7 +8,7 @@ import { Game } from "../../src/ui/game";
 
 // The run on screen: how commands reach the simulation while time stands still, because
 // the game is paused (FR-024, AC14) or a reward is waiting to be chosen (FR-016).
-// Both cases below were found in code review.
+// Every case below was found in code review.
 
 const tuning = validateTuning(tuningJson);
 const region = validateRegion(regionJson, tuning.maxSites);
@@ -64,9 +64,16 @@ describe("commands while a reward waits to be chosen (FR-016)", () => {
     expect(game.world.links).toHaveLength(0);
 
     expect(game.issue({ type: "chooseReward", choice: "fiber" })).toBeNull();
+    // The choice is held with the rest until the step runs, so the planned world stays the one to read.
+    expect(game.rewardChosen).toBe(true);
+    expect(game.pending.map((command) => command.type)).toEqual(["layLink", "setCost", "setCost", "setCost", "chooseReward"]);
+    expect(game.planned.fiberKm).toBe(1 + tuning.rewardFiberKm);
+    expect(findLink(game.planned, a.id, b.id)!.cost).toBe(DEFAULT_LINK_COST + 3);
+    // A second press of the reward button is refused in words; it does not reach the simulation.
+    expect(game.issue({ type: "chooseReward", choice: "upgrade" })).toBe("no-reward-pending");
+    game.tick(0);
     expect(game.pending).toHaveLength(0);
     expect(game.projected).toBeNull();
-    game.tick(0);
 
     const laid = findLink(game.world, a.id, b.id)!;
     expect(laid.id).toBe(pendingLink.id);
@@ -83,6 +90,26 @@ describe("commands while a reward waits to be chosen (FR-016)", () => {
       `${tuning.stepsPerSec}:setCost`,
       `${tuning.stepsPerSec}:chooseReward`,
     ]);
+  });
+
+  it("made between the choice and the step that applies it are checked against what is already held", () => {
+    const { game, refused } = atReward();
+    const [a, b, c] = presentSites(game.world);
+    game.world.fiberKm = 1_000_000;
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBeNull();
+    expect(game.issue({ type: "chooseReward", choice: "upgrade" })).toBeNull();
+    // Before the next frame: the same link again is a duplicate of the held one, and is refused now.
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBe("duplicate-link");
+    // Another link is accepted, gets the next ID, and a cost set on that ID lands on it.
+    expect(game.issue({ type: "layLink", a: b!.id, b: c!.id })).toBeNull();
+    const second = findLink(game.planned, b!.id, c!.id)!;
+    expect(second.id).not.toBe(findLink(game.planned, a!.id, b!.id)!.id);
+    expect(game.issue({ type: "setCost", link: second.id, cost: 77 })).toBeNull();
+    game.tick(0);
+    expect(findLink(game.world, b!.id, c!.id)).toMatchObject({ id: second.id, cost: 77 });
+    expect(findLink(game.world, a!.id, b!.id)!.cost).toBe(DEFAULT_LINK_COST);
+    expect(game.world.upgrades).toBe(tuning.startUpgrades + 1);
+    expect(refused).toEqual([]);
   });
 
   it("go with the scripted player's choice too, so nothing stays held once time moves", () => {
@@ -123,6 +150,48 @@ describe("a command sent in the instant before a pause (AC14)", () => {
     expect(findLink(game.world, b!.id, c!.id)).toMatchObject({ id: second.id, cost: 50 });
     expect(findLink(game.world, a!.id, b!.id)!.cost).toBe(DEFAULT_LINK_COST);
     expect(refused).toEqual([]);
+  });
+
+  it("stays in the planned world from resume until the step that applies it, with no gap", () => {
+    const { game, refused } = newGame();
+    game.advance(5);
+    const [a, b, c] = presentSites(game.world);
+    game.setPaused(true);
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBeNull();
+    const held = findLink(game.planned, a!.id, b!.id)!;
+    const budget = game.planned.fiberKm;
+
+    game.setPaused(false);
+    // Resumed, but no step has run yet: the link panel and the HUD read the planned world.
+    expect(game.world.links).toHaveLength(0);
+    expect(findLink(game.planned, a!.id, b!.id)).toMatchObject({ id: held.id });
+    expect(game.planned.fiberKm).toBe(budget);
+    // A change made in this instant is checked against the held ones and goes with them.
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBe("duplicate-link");
+    expect(game.issue({ type: "layLink", a: b!.id, b: c!.id })).toBeNull();
+    expect(game.issue({ type: "setCost", link: held.id, cost: 31 })).toBeNull();
+
+    game.tick(game.stepMs);
+    expect(game.pending).toHaveLength(0);
+    expect(game.projected).toBeNull();
+    expect(findLink(game.world, a!.id, b!.id)).toMatchObject({ id: held.id, cost: 31 });
+    expect(findLink(game.world, b!.id, c!.id)).toBeDefined();
+    expect(game.log.map((entry) => entry.step)).toEqual([5, 5, 5]);
+    expect(refused).toEqual([]);
+  });
+
+  it("time does not move while paused, by the frame loop or by the test hook, so a pause cannot meet a reward", () => {
+    const { game } = newGame({ rewardEverySec: 1 });
+    game.advance(5);
+    game.setPaused(true);
+    game.advance(10 * tuning.stepsPerSec);
+    game.tick(10_000);
+    expect(game.world.step).toBe(5);
+    expect(game.world.rewardPending).toBe(false);
+    game.setPaused(false);
+    game.advance(10 * tuning.stepsPerSec);
+    expect(game.world.rewardPending).toBe(true);
+    expect(game.world.step).toBe(tuning.stepsPerSec);
   });
 
   it("is refused in words at the pause if an earlier queued command already spent what it needs", () => {

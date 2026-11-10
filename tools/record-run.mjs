@@ -22,10 +22,13 @@ const SIZES = [
   { name: "844x390", width: 844, height: 390, phone: true },
   { name: "1920x1080", width: 1920, height: 1080, phone: false },
 ];
-const work = mkdtempSync(join(tmpdir(), "backbone-video-"));
+// The server comes first: if it cannot start, nothing has been made that needs clearing away.
+// Everything after it is inside the try, so the server and the folder never outlive a failure.
 const server = await serveDist();
+let work = null;
 
 try {
+  work = mkdtempSync(join(tmpdir(), "backbone-video-"));
   const browser = await chromium.launch();
   for (const size of SIZES) {
     const context = await browser.newContext({
@@ -74,5 +77,5 @@ try {
   await browser.close();
 } finally {
   server.stop();
-  rmSync(work, { recursive: true, force: true });
+  if (work) rmSync(work, { recursive: true, force: true });
 }
