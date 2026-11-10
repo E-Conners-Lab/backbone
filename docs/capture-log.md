@@ -107,12 +107,12 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Creator display name | Agent | Owner, 2026-11-09: keep "Elliot Conner" |
 | Record a run of the agent playing, showing every scenario | Owner | A scripted player and recorder were built. The owner watched about 6 game minutes live and stopped the run. No finished video. |
 | Does the Arcade need a hosted URL? | Owner | No. The template describes `hosted_url` as "public URL if it is deployed (GitHub Pages etc), else" blank, and the Arcade page asks only for a public repo URL with the consent box ticked. The Per-Hop Works example has a "Play now" link on the Arcade's own site; how that copy is produced was not verified. Checked 2026-11-09 from the template, the Arcade page and the example page. |
+| The rules say only the owner sets `consent_to_publish`, and the agent made the edit. Keep it or redo it by hand? | Agent | Owner, 2026-11-09: keep the edit. Recorded in PID amendment 1.2. |
 | Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 
 ## Open items
 
 - These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
-- The owner's rules say only the owner sets `consent_to_publish`; the agent set it on his spoken instruction. Recorded as PID amendment 1.2 for him to confirm or redo.
 - No showcase run has been recorded to game over.
 - Frame rate on a real mid-range phone has not been measured.
 - The owner played it by hand on 2026-11-09 ("seems to be pretty good"). How long the run lasted was not recorded, so run length for people is still unknown.

@@ -149,4 +149,4 @@ If the owner's plan reports usage at the end, the measured figures go into `PROV
 |---|---|---|
 | 1.0 | 2026-11-09 | Initial PID, written with the spec drafts, before any code |
 | 1.1 | 2026-11-09 | Spec amendments during the build: no mute control in v1; a cut link cannot be removed; packets on a removed link are lost. FRR comparison (PIS-09) run and passed. PIS-13: one `code-review` sub-agent run was used. |
-| 1.2 | 2026-11-09 | PIS-24 says the agent never sets `consent_to_publish`. The owner said in the session, after playing the game, that he consents to publish; the agent then made the edit in `ARCADE.md` on his behalf. This is an exception to the hard stop, recorded here for the owner to confirm or to redo by hand. The rule itself is unchanged. |
+| 1.2 | 2026-11-09 | PIS-24 says the agent never sets `consent_to_publish`. The owner said in the session, after playing the game, that he consents to publish; the agent then made the edit in `ARCADE.md` on his behalf. This is an exception to the hard stop, recorded here for the owner to confirm or to redo by hand. The owner confirmed it the same day: keep the edit. The rule itself is unchanged. |
