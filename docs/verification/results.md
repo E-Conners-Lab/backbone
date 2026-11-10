@@ -370,8 +370,8 @@ Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` 
 | --- | --- | --- |
 | 1. `ARCADE.md` at the root of the repository, from the template | Done | Every field of the template is present with the template's names; `artifacts` uses the template's seven words; text limits kept (tagline 76 characters of 90; "How it was built" 246 words of 250; three bullets) |
 | 2. Filled in by the build agent, with `unknown` where nothing was recorded; the human gives only name, GitHub name, location, links, first project, consent | Done | `started`, `wall_time` and token usage are `unknown`. The creator block is the owner's, from 2026-11-09, and was not touched by the rebuild (compared with the commit the session began from). |
-| 3. Run the game once to confirm the Runtime section; a 16:9 card image under 1 MB; commit and push | Runtime confirmed; image present; committed. **Not pushed.** | `node tools/confirm-runtime.mjs`: 8 of 8. `public/hero.webp`: 1600×900, 76,758 bytes, WebP, and the same file is in `dist/`. Pushing is the owner's. |
-| 4. Send the public GitHub URL to John; nothing is listed unless `consent_to_publish: true` | **The owner's** | The repository is public and Apache-2.0. Its default branch `main` still holds the hand-built v1; the rebuild branch contains all of `main` and is ahead of it, with no divergence, so it can be brought in by fast-forward or by a pull request. `consent_to_publish` is `true` in the file, set on the owner's word on 2026-11-09 after he played the hand-built v1; whether it covers the rebuilt game is his to say (K4). |
+| 3. Run the game once to confirm the Runtime section; a 16:9 card image under 1 MB; commit and push | Done. Pushed on 2026-11-10T19:33Z on the owner's word. | `node tools/confirm-runtime.mjs`: 8 of 8. `public/hero.webp`: 1600×900, 76,758 bytes, WebP, and the same file is in `dist/`. Branch `speckit-rebuild` is on GitHub at the commit that was pushed; GitHub reports it ahead of `main` and not behind. |
+| 4. Send the public GitHub URL to John; nothing is listed unless `consent_to_publish: true` | Consent given. **Two things left, both the owner's:** merge pull request #2, and send the URL. | The repository is public and Apache-2.0. Its default branch `main` still holds the hand-built v1 until pull request #2 (`speckit-rebuild` into `main`, opened 2026-11-10T19:34Z, mergeable, not merged) is merged. `consent_to_publish` is `true`; the owner confirmed it for the rebuilt game on 2026-11-10 ("go ahead and push, and I consent"). |
 
 **The lab's ready-to-demo checklist**
 
@@ -383,7 +383,7 @@ Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` 
 | Core interactions work with the keyboard and visible focus | Yes | AC17 |
 | The README's commands work from a fresh checkout | Yes | "Fresh copy" above |
 | Verification notes distinguish passed, failed, and untested checks | Yes | The README's verification table and this file |
-| The intended files are pushed, and any live demo link opens | **Not pushed.** No live demo is claimed. | The owner's |
+| The intended files are pushed, and any live demo link opens | Pushed to branch `speckit-rebuild`; `main` holds v1 until pull request #2 is merged. No live demo is claimed. | GitHub's branch head equals the local one |
 
 **The README against the workshop's README shape:** title, one-line pitch, the workshop line, the project table, the challenge, what you'll learn with "Before playing", play locally, how to play with a controls table and "Progress", what the game models with "Outside the model" and a reference table, how it was built with the template's six points, verification with "Last checked" (date, system, browser, commit) and a results table that marks unrun checks as not run, known limitations and next steps, credits in the template's wording, assets and dependencies, licence. Nothing in the template's block for the attendee is left in.
 

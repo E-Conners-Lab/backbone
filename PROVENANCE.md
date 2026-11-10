@@ -253,6 +253,7 @@ not prompts, and are not counted.
 | R29 | 2026-11-10T18:52Z | `node tools/confirm-runtime.mjs` on the final build; `docs/spec-map.png` rendered again (the page fetched IBM Plex from Google Fonts with a generic headless browser request) | Runtime section confirmed, 8 of 8. Spec map shows 124, 74 and 198. |
 | R30 | 2026-11-10T18:58Z | Fresh-copy check on a clone of `0e8572a`: `npm ci`, `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e`, `node tools/confirm-runtime.mjs` | All pass: 124 unit, 74 end-to-end with 4 skipped by design, `dist/` equal to a fresh build, runtime 8 of 8. |
 | R31 | 2026-11-10T19:30Z | `node tools/make-card.mjs arcade 7764 450 0.93` (Playwright Chromium, cwebp); `npm run build`, `npm run verify:dist`, `npm test`, `npx playwright test` on `us1-shape`, `us4-access`, `us5-endless` and the offline tests | New `public/hero.webp`, SHA-256 `8f5b5669…a94c`. All checks pass. |
+| R32 | 2026-11-10T19:33Z | gitleaks 8.30.1 over the working tree; `git push origin speckit-rebuild`; `gh api` to read the branch head and compare with `main`; `gh pr create` and `gh pr edit` | No leaks. Pushed `5fd0490..dbc1179`. Pull request #2 open, mergeable, not merged. |
 
 ## Changes of direction by the owner in the rebuild
 
@@ -274,3 +275,5 @@ not prompts, and are not counted.
 | All ten code-review findings were fixed without asking which to fix | The owner's standing rule: fix the real findings, report any left. None was left. |
 | The FRR lab was built a second time in Docker | The comparison tool was changed by two review fixes, so its earlier pass no longer vouched for it |
 | The seeded-run videos are committed to the repository | C7's evidence asks for them in the repo. The owner's choice to keep the showcase video of the hand-built v1 private is read as covering that video only (open item L7). |
+| Opened pull request #2 into `main` after the push, and did not merge it | The agent had offered to "push and open the pull request into `main`" and the owner answered "go ahead and push"; the agent read that as the go-ahead for both. Merging changes what the public default branch holds, so it is left to the owner. |
+| The first pull request description was 155 words, over the owner's limit of 150; it was shortened to 146 a minute later | The agent sent it before checking its own count |
