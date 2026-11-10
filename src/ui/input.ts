@@ -1,161 +1,223 @@
-// Pointer, touch and keyboard input. Touch and mouse share one code path (pointer events).
-// Phone: drag between sites, tap a link, pinch to zoom, two-finger pan.
-// Desktop: the same with a mouse and wheel; space pauses; 1/2/3 pick tools.
+// Pointer, touch and keyboard input on the map (AC15, AC16, AC17). Nothing here has a time
+// limit, and every target is at least 44 CSS pixels across (C3, FR-029).
 
-import { panBy, zoomAt, type Camera } from "../render/camera";
-import type { Drag, Scene } from "../render/scene";
-import type { Game } from "./game";
-import type { Hud } from "./hud";
+import { HIT_RADIUS, distanceToSegment, type Camera } from "../render/camera";
+import type { Scene, SceneLink, SceneSite } from "../render/viewmodel";
+import type { LinkId, SiteId } from "../sim/types";
+import type { Game, Tool } from "./game";
 
-export class Input {
-  drag: Drag | null = null;
-  /** Site highlighted for keyboard play. */
-  focusSite: number | null = null;
-  /** Keyboard link in progress: the site it starts from. */
-  private keyFrom: number | null = null;
-  scene: Scene | null = null;
-  cameraMoved = false;
-  private pointers = new Map<number, { x: number; y: number }>();
-  private down: { x: number; y: number; site: number | null; link: number | null; moved: boolean } | null = null;
-  private pinch: { dist: number; mx: number; my: number } | null = null;
+export interface InputHooks {
+  game(): Game | null;
+  scene(): Scene | null;
+  camera: Camera;
+  layLink(a: SiteId, b: SiteId): void;
+  siteChosen(id: SiteId): void;
+  openLink(id: LinkId): void;
+  togglePause(): void;
+  toggleInspector(): void;
+  setTool(tool: Tool): void;
+  escape(): void;
+  moved(): void;
+}
 
-  constructor(private canvas: HTMLCanvasElement, private game: Game, private hud: Hud, private cam: () => Camera) {
-    canvas.addEventListener("pointerdown", e => this.onDown(e));
-    canvas.addEventListener("pointermove", e => this.onMove(e));
-    canvas.addEventListener("pointerup", e => this.onUp(e));
-    canvas.addEventListener("pointercancel", e => this.onUp(e, true));
-    canvas.addEventListener("wheel", e => { e.preventDefault(); zoomAt(this.cam(), e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); this.cameraMoved = true; }, { passive: false });
-    canvas.addEventListener("contextmenu", e => e.preventDefault());
-    window.addEventListener("keydown", e => this.onKey(e));
-  }
-
-  private siteAt(x: number, y: number, exclude: number | null = null): number | null {
-    let best: number | null = null, bestD = Infinity;
-    for (const s of this.scene?.sites ?? []) {
-      if (s.id === exclude) continue;
-      const d = Math.hypot(s.x - x, s.y - y);
-      if (d <= s.r && d < bestD) { bestD = d; best = s.id; }
+export function siteAt(scene: Scene, x: number, y: number): SceneSite | null {
+  let best: SceneSite | null = null;
+  let bestDistance = Infinity;
+  for (const site of scene.sites) {
+    const d = Math.hypot(site.x - x, site.y - y);
+    if (d <= Math.max(HIT_RADIUS, 9 * site.s + 8) && d < bestDistance) {
+      best = site;
+      bestDistance = d;
     }
-    return best;
   }
-  private linkAt(x: number, y: number, slop: number): number | null {
-    let best: number | null = null, bestD = slop;
-    for (const l of this.scene?.links ?? []) {
-      const dx = l.x1 - l.x0, dy = l.y1 - l.y0, len2 = dx * dx + dy * dy || 1;
-      const t = Math.min(1, Math.max(0, ((x - l.x0) * dx + (y - l.y0) * dy) / len2));
-      const d = Math.hypot(l.x0 + dx * t - x, l.y0 + dy * t - y);
-      if (d < bestD) { bestD = d; best = l.id; }
-    }
-    return best;
-  }
+  return best;
+}
 
-  private onDown(e: PointerEvent): void {
-    this.canvas.setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
-    if (this.pointers.size === 2) {
-      // Second finger: whatever the first was doing becomes pinch-zoom and two-finger pan.
-      this.drag = null; this.down = null;
-      const [a, b] = [...this.pointers.values()];
-      this.pinch = { dist: Math.hypot(a!.x - b!.x, a!.y - b!.y), mx: (a!.x + b!.x) / 2, my: (a!.y + b!.y) / 2 };
+export function linkAt(scene: Scene, x: number, y: number): SceneLink | null {
+  let best: SceneLink | null = null;
+  let bestDistance = Infinity;
+  for (const link of scene.links) {
+    const d = distanceToSegment(x, y, link.ax, link.ay, link.bx, link.by);
+    if (d <= HIT_RADIUS && d < bestDistance) {
+      best = link;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+const TOOLS: Record<string, Tool> = { "1": "link", "2": "cost", "3": "upgrade", "4": "remove" };
+
+export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void {
+  const pointers = new Map<number, { x: number; y: number }>();
+  let mode: "idle" | "link" | "tap-link" | "pan" | "pinch" = "idle";
+  let startX = 0;
+  let startY = 0;
+  let moved = false;
+  let fromSite: SiteId = 0;
+  let tapLink: LinkId = 0;
+  /** A link that was tapped and waits for the browser's click before its panel opens. */
+  let tapped: LinkId = 0;
+  let pinch = { distance: 1, x: 0, y: 0 };
+  /** The map point a drag or a pinch is holding. */
+  let held = { x: 0, y: 0 };
+
+  const position = (event: PointerEvent | WheelEvent): { x: number; y: number } => {
+    const box = canvas.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  };
+  const pinchState = (): { distance: number; x: number; y: number } => {
+    const [p, q] = [...pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    return { distance: Math.max(1, Math.hypot(p.x - q.x, p.y - q.y)), x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+  };
+
+  canvas.addEventListener("pointerdown", (event) => {
+    const game = hooks.game();
+    const scene = hooks.scene();
+    if (!game || !scene || game.world.over) return;
+    const at = position(event);
+    canvas.setPointerCapture(event.pointerId);
+    canvas.focus({ preventScroll: true });
+    pointers.set(event.pointerId, at);
+    if (pointers.size === 2) {
+      // A second finger turns whatever was happening into pinch and pan.
+      game.drag = null;
+      mode = "pinch";
+      pinch = pinchState();
+      held = hooks.camera.toMap(pinch.x, pinch.y);
       return;
     }
-    if (this.pointers.size > 2 || this.game.mode !== "play") return;
-    const site = this.siteAt(e.offsetX, e.offsetY);
-    const link = site === null ? this.linkAt(e.offsetX, e.offsetY, e.pointerType === "touch" ? 22 : 12) : null;
-    this.down = { x: e.offsetX, y: e.offsetY, site, link, moved: false };
-    if (site !== null) this.drag = { from: site, x: e.offsetX, y: e.offsetY, over: null };
-  }
+    if (pointers.size > 2) return;
+    startX = at.x;
+    startY = at.y;
+    moved = false;
+    const site = siteAt(scene, at.x, at.y);
+    const link = site ? null : linkAt(scene, at.x, at.y);
+    if (site) {
+      mode = "link";
+      fromSite = site.id;
+      game.drag = { from: site.id, x: at.x, y: at.y };
+    } else if (link) {
+      mode = "tap-link";
+      tapLink = link.id;
+    } else {
+      mode = "pan";
+      held = hooks.camera.toMap(at.x, at.y);
+    }
+  });
 
-  private onMove(e: PointerEvent): void {
-    const p = this.pointers.get(e.pointerId);
-    if (!p) return;
-    const px = p.x, py = p.y;
-    p.x = e.offsetX; p.y = e.offsetY;
-    if (this.pinch && this.pointers.size === 2) {
-      const [a, b] = [...this.pointers.values()];
-      const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y), mx = (a!.x + b!.x) / 2, my = (a!.y + b!.y) / 2;
-      panBy(this.cam(), this.pinch.mx, this.pinch.my, mx, my);
-      if (this.pinch.dist > 0) zoomAt(this.cam(), mx, my, dist / this.pinch.dist);
-      this.pinch = { dist, mx, my };
-      this.cameraMoved = true;
+  canvas.addEventListener("pointermove", (event) => {
+    const game = hooks.game();
+    const previous = pointers.get(event.pointerId);
+    if (!game || !previous) return;
+    const at = position(event);
+    pointers.set(event.pointerId, at);
+    if (mode === "pinch" && pointers.size >= 2) {
+      // The map point between the fingers stays between the fingers while they spread or move.
+      const now = pinchState();
+      hooks.camera.zoomAt(now.distance / pinch.distance, now.x, now.y);
+      hooks.camera.pin(held, now.x, now.y);
+      pinch = now;
+      hooks.moved();
       return;
     }
-    if (!this.down) return;
-    if (Math.hypot(e.offsetX - this.down.x, e.offsetY - this.down.y) > 8) this.down.moved = true;
-    if (this.drag) {
-      this.drag.x = e.offsetX; this.drag.y = e.offsetY;
-      this.drag.over = this.siteAt(e.offsetX, e.offsetY, this.drag.from);
-    } else if (this.down.moved) {
-      panBy(this.cam(), px, py, e.offsetX, e.offsetY);
-      this.cameraMoved = true;
+    if (Math.hypot(at.x - startX, at.y - startY) > 8) moved = true;
+    if (mode === "link" && game.drag) {
+      game.drag.x = at.x;
+      game.drag.y = at.y;
+    } else if (mode === "tap-link" && moved) {
+      mode = "pan";
+      held = hooks.camera.toMap(previous.x, previous.y);
+    } else if (mode === "pan") {
+      hooks.camera.pin(held, at.x, at.y);
+      hooks.moved();
     }
-  }
+  });
 
-  private onUp(e: PointerEvent, cancelled = false): void {
-    this.pointers.delete(e.pointerId);
-    if (this.pointers.size < 2) this.pinch = null;
-    const down = this.down, drag = this.drag;
-    this.down = null; this.drag = null;
-    if (cancelled || !down || this.game.mode !== "play") return;
-    const g = this.game;
-    if (drag && drag.over !== null) { g.issue({ type: "layLink", a: drag.from, b: drag.over }); return; }
-    if (down.moved) return;
-    if (down.link !== null) {
-      // A tap on a link opens its options; with the Upgrade tool it upgrades straight away.
-      g.selectedLink = down.link;
-      if (g.tool === "upgrade") g.issue({ type: "upgrade", link: down.link });
-    } else if (down.site !== null) {
-      this.focusSite = down.site;
-      g.say("Drag from this site to another to lay a link.", "info", 3);
-    } else g.selectedLink = null;
-  }
-
-  private onKey(e: KeyboardEvent): void {
-    const g = this.game, target = e.target as HTMLElement | null;
-    const typing = target instanceof HTMLInputElement || target instanceof HTMLSelectElement;
-    if (e.key === "Escape") { if (this.keyFrom !== null) { this.keyFrom = null; this.drag = null; } else this.hud.closeTop(); return; }
-    if (typing || e.metaKey || e.ctrlKey || e.altKey || g.mode !== "play") return;
-    const onMap = target === this.canvas;
-    switch (e.key) {
-      case " ": if (!(target instanceof HTMLButtonElement)) { e.preventDefault(); this.hud.togglePause(); } break;
-      case "1": this.hud.setTool("link"); break;
-      case "2": this.hud.setTool("cost"); break;
-      case "3": this.hud.setTool("upgrade"); break;
-      case "i": case "I": this.hud.toggleInspector(); break;
-      case "+": case "=": zoomAt(this.cam(), this.cam().w / 2, this.cam().h / 2, 1.2); this.cameraMoved = true; break;
-      case "-": case "_": zoomAt(this.cam(), this.cam().w / 2, this.cam().h / 2, 1 / 1.2); this.cameraMoved = true; break;
-      case "ArrowLeft": case "ArrowRight": case "ArrowUp": case "ArrowDown":
-        if (onMap) { e.preventDefault(); this.moveFocus(e.key); }
-        break;
-      case "Enter":
-        if (!onMap || this.focusSite === null) break;
-        e.preventDefault();
-        if (this.keyFrom === null) { this.keyFrom = this.focusSite; g.say("Link started. Move to another site and press Enter. Escape cancels.", "info", 6); }
-        else { if (this.keyFrom !== this.focusSite) g.issue({ type: "layLink", a: this.keyFrom, b: this.focusSite }); this.keyFrom = null; this.drag = null; }
-        break;
-      default: break;
+  const release = (event: PointerEvent, cancelled: boolean): void => {
+    const game = hooks.game();
+    const scene = hooks.scene();
+    const at = pointers.get(event.pointerId);
+    pointers.delete(event.pointerId);
+    if (!game || !at) return;
+    if (mode === "pinch") {
+      if (pointers.size < 2) mode = "idle";
+      return;
     }
-  }
-
-  /** Moves keyboard focus to the nearest site in the arrow's direction. */
-  private moveFocus(key: string): void {
-    const sites = this.scene?.sites ?? [];
-    if (sites.length === 0) return;
-    const cur = sites.find(s => s.id === this.focusSite);
-    if (!cur) { this.focusSite = sites[0]!.id; }
-    else {
-      const [vx, vy] = key === "ArrowLeft" ? [-1, 0] : key === "ArrowRight" ? [1, 0] : key === "ArrowUp" ? [0, -1] : [0, 1];
-      let best: number | null = null, bestScore = Infinity;
-      for (const s of sites) {
-        if (s.id === cur.id) continue;
-        const dx = s.x - cur.x, dy = s.y - cur.y, along = dx * vx + dy * vy, across = Math.abs(dx * vy - dy * vx);
-        if (along <= 0) continue;
-        const score = along + across * 2;
-        if (score < bestScore) { bestScore = score; best = s.id; }
-      }
-      if (best !== null) this.focusSite = best;
+    if (mode === "link") {
+      game.drag = null;
+      const target = !cancelled && scene ? siteAt(scene, at.x, at.y) : null;
+      // Dragging away and back to the same site asks for a self-link, which the rules refuse in words.
+      if (target && (target.id !== fromSite || moved)) hooks.layLink(fromSite, target.id);
+      else if (!cancelled && !moved) hooks.siteChosen(fromSite);
+    } else if (mode === "tap-link" && !cancelled && !moved) {
+      // The options panel opens under the finger. If it opened now, the click that the
+      // browser sends after a touch would land on one of its buttons. So it opens on that
+      // click instead, with a short timer in case the browser sends none.
+      const id = tapLink;
+      tapped = id;
+      window.setTimeout(() => {
+        if (tapped === id) {
+          tapped = 0;
+          hooks.openLink(id);
+        }
+      }, 350);
     }
-    const f = sites.find(s => s.id === this.focusSite);
-    if (this.keyFrom !== null && f) this.drag = { from: this.keyFrom, x: f.x, y: f.y, over: this.keyFrom === f.id ? null : f.id };
-  }
+    mode = "idle";
+  };
+  canvas.addEventListener("pointerup", (event) => release(event, false));
+  canvas.addEventListener("pointercancel", (event) => release(event, true));
+  canvas.addEventListener("click", () => {
+    if (tapped === 0) return;
+    const id = tapped;
+    tapped = 0;
+    hooks.openLink(id);
+  });
+
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      if (!hooks.game()) return;
+      event.preventDefault();
+      const at = position(event);
+      hooks.camera.zoomAt(Math.exp(-event.deltaY * 0.0015), at.x, at.y);
+      hooks.moved();
+    },
+    { passive: false },
+  );
+
+  document.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "Escape") {
+      hooks.escape();
+      return;
+    }
+    const game = hooks.game();
+    const target = event.target;
+    if (!game || target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) return;
+    const camera = hooks.camera;
+    const onControl = target instanceof HTMLButtonElement;
+    const tool = TOOLS[event.key];
+    if (tool) {
+      hooks.setTool(tool);
+    } else if (event.key === " ") {
+      // On a button, Space presses that button, as it does everywhere else.
+      if (onControl) return;
+      event.preventDefault();
+      hooks.togglePause();
+    } else if (event.key === "i" || event.key === "I") {
+      hooks.toggleInspector();
+    } else if (event.key === "+" || event.key === "=") {
+      camera.zoomAt(1.25, camera.width / 2, camera.height / 2);
+      hooks.moved();
+    } else if (event.key === "-" || event.key === "_") {
+      camera.zoomAt(0.8, camera.width / 2, camera.height / 2);
+      hooks.moved();
+    } else if (event.key.startsWith("Arrow") && (target === canvas || target === document.body)) {
+      event.preventDefault();
+      const stride = 60;
+      camera.panBy(event.key === "ArrowLeft" ? stride : event.key === "ArrowRight" ? -stride : 0, event.key === "ArrowUp" ? stride : event.key === "ArrowDown" ? -stride : 0);
+      hooks.moved();
+    }
+  });
 }

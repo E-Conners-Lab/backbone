@@ -1,96 +1,70 @@
-// Shortest-path-first route calculation, after RFC 2328 section 16.1, reduced to one area of
-// routers joined by point-to-point links (SPEC F1-F7, S1, S2).
-//
-// For each router as root, Dijkstra builds the shortest-path tree. A path's cost is the sum of
-// its link costs. When a second path of EQUAL cost reaches a router, its next hops are ADDED to
-// the set (16.1 step 2d, second bullet; 16.8). The next hop for a root's direct neighbour is that
-// neighbour; for anything further it is inherited from the parent (16.1.1).
+// Shortest-path trees and next-hop sets (F1–F6): RFC 2328 §16.1 reduced to one area of
+// routers joined by point-to-point links.
 
-export type RouterId = number;
+import type { Routes, SiteId } from "./types";
 
-export interface SpfLink {
-  a: RouterId;
-  b: RouterId;
-  /** Integer 1..65535 (RFC 2328 C.3: greater than 0; A.4.2: 16-bit metric). Same in both directions (S2). */
+export interface RouteLink {
+  a: SiteId;
+  b: SiteId;
   cost: number;
-  /** A down link is absent in both directions (F6). */
-  up: boolean;
-}
-
-export interface Route {
-  cost: number;
-  /** Neighbour router IDs, ascending. Length 1 unless equal-cost sharing is on. */
-  nextHops: RouterId[];
-}
-
-/** routes.get(from)?.get(to). A missing entry means unreachable. There is no entry for from === to. */
-export type Routes = Map<RouterId, Map<RouterId, Route>>;
-
-export const MIN_COST = 1;
-export const MAX_COST = 65535;
-
-export function isValidCost(cost: number): boolean {
-  return Number.isInteger(cost) && cost >= MIN_COST && cost <= MAX_COST;
 }
 
 /**
- * @param maxPaths how many equal-cost next hops each router keeps. 1 keeps the lowest router ID
- *   (F4, S7). Infinity keeps all (F3).
+ * For each router and each destination it can reach: the lowest total cost and the next
+ * hops on every path of that cost, sorted by router ID, cut down to the first `maxPaths`.
+ * Only links passed in are used, so the caller leaves out links that are down (F6).
  */
-export function computeRoutes(routers: readonly RouterId[], links: readonly SpfLink[], maxPaths: number): Routes {
+export function computeRoutes(routers: SiteId[], links: RouteLink[], maxPaths: number): Routes {
   const ids = [...routers].sort((x, y) => x - y);
-  const adj = new Map<RouterId, { to: RouterId; cost: number }[]>();
-  for (const id of ids) adj.set(id, []);
-  for (const l of links) {
-    if (!l.up) continue;
-    if (!isValidCost(l.cost)) throw new Error(`invalid link cost ${l.cost} on ${l.a}-${l.b}`);
-    adj.get(l.a)?.push({ to: l.b, cost: l.cost });
-    adj.get(l.b)?.push({ to: l.a, cost: l.cost });
+  const neighbours = new Map<SiteId, { to: SiteId; cost: number }[]>();
+  for (const id of ids) neighbours.set(id, []);
+  for (const link of links) {
+    neighbours.get(link.a)?.push({ to: link.b, cost: link.cost });
+    neighbours.get(link.b)?.push({ to: link.a, cost: link.cost });
   }
 
-  const routes: Routes = new Map();
+  const routes: Routes = {};
   for (const root of ids) {
-    const dist = new Map<RouterId, number>([[root, 0]]);
-    const hops = new Map<RouterId, Set<RouterId>>();
-    const done = new Set<RouterId>();
+    const dist = new Map<SiteId, number>([[root, 0]]);
+    const firstHops = new Map<SiteId, Set<SiteId>>();
+    const done = new Set<SiteId>();
 
     for (;;) {
-      // Closest candidate not yet on the tree. Ties broken by lowest router ID for determinism;
-      // with positive costs the choice among ties does not change any result.
-      let v: RouterId | undefined;
-      let best = Infinity;
+      // Closest router not yet settled; ties go to the lower ID so the order is fixed.
+      let at: SiteId | null = null;
       for (const id of ids) {
         const d = dist.get(id);
-        if (d !== undefined && !done.has(id) && d < best) { best = d; v = id; }
+        if (d === undefined || done.has(id)) continue;
+        if (at === null || d < dist.get(at)!) at = id;
       }
-      if (v === undefined) break;
-      done.add(v);
+      if (at === null) break;
+      done.add(at);
 
-      for (const { to: w, cost } of adj.get(v) ?? []) {
-        if (done.has(w)) continue;
-        const d = best + cost;
-        const known = dist.get(w);
-        const via: Iterable<RouterId> = v === root ? [w] : (hops.get(v) ?? []);
-        if (known === undefined || d < known) {
-          dist.set(w, d);
-          hops.set(w, new Set(via));
-        } else if (d === known) {
-          const set = hops.get(w);
-          if (set) for (const h of via) set.add(h);
+      for (const edge of neighbours.get(at) ?? []) {
+        if (done.has(edge.to)) continue;
+        const total = dist.get(at)! + edge.cost;
+        // Leaving the root, the first hop is the neighbour itself. Further out, a path
+        // inherits the first hops of the router it comes through.
+        const via = at === root ? [edge.to] : [...firstHops.get(at)!];
+        const known = dist.get(edge.to);
+        if (known === undefined || total < known) {
+          dist.set(edge.to, total);
+          firstHops.set(edge.to, new Set(via));
+        } else if (total === known) {
+          // Equal cost: record every tied next hop (F3).
+          for (const hop of via) firstHops.get(edge.to)!.add(hop);
         }
       }
     }
 
-    const table = new Map<RouterId, Route>();
+    const table: Routes[number] = {};
     for (const id of ids) {
-      if (id === root) continue;
-      const cost = dist.get(id);
-      const set = hops.get(id);
-      if (cost === undefined || !set) continue;
-      const nextHops = [...set].sort((x, y) => x - y).slice(0, Math.max(1, maxPaths));
-      table.set(id, { cost, nextHops });
+      if (id === root || !dist.has(id)) continue;
+      const hops = [...firstHops.get(id)!].sort((x, y) => x - y);
+      // A router may keep fewer than all equal-cost routes (F4); the lowest IDs stay (S7).
+      table[id] = { cost: dist.get(id)!, nextHops: hops.slice(0, maxPaths) };
     }
-    routes.set(root, table);
+    routes[root] = table;
   }
   return routes;
 }

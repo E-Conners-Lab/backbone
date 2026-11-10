@@ -1,16 +1,27 @@
 import { defineConfig } from "@playwright/test";
 
-// End-to-end tests run against dist/, the folder that ships, served by a plain static server.
+// Not 8000 or 8765: on the owner's machine both belong to other local servers.
+const PORT = 8791;
+
+// End-to-end tests run against the committed build output, served as plain files.
 export default defineConfig({
   testDir: "tests/e2e",
-  timeout: 240_000,
-  fullyParallel: true,
+  testMatch: "**/*.spec.ts",
+  timeout: 180_000,
+  workers: 2,
   reporter: [["list"]],
-  outputDir: "test-results",
-  use: { baseURL: "http://127.0.0.1:4173", deviceScaleFactor: 1 },
-  webServer: { command: "python3 -m http.server 4173 --bind 127.0.0.1 --directory dist", url: "http://127.0.0.1:4173", reuseExistingServer: true },
+  // A click that cannot happen fails in 15 seconds with its reason, not at the end of the test.
+  use: { baseURL: `http://127.0.0.1:${PORT}/`, browserName: "chromium", actionTimeout: 15_000 },
+  webServer: {
+    command: `python3 -m http.server ${PORT} --bind 127.0.0.1 --directory dist`,
+    url: `http://127.0.0.1:${PORT}/`,
+    // Never reuse a server that is already there: it may be serving a different build.
+    reuseExistingServer: false,
+    stdout: "ignore",
+    stderr: "ignore",
+  },
   projects: [
-    { name: "desktop-1920x1080", use: { viewport: { width: 1920, height: 1080 } } },
-    { name: "phone-844x390", use: { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true } },
+    { name: "desktop", use: { viewport: { width: 1920, height: 1080 } } },
+    { name: "phone", use: { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true } },
   ],
 });

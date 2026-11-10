@@ -1,8 +1,8 @@
 import { defineConfig } from "vitest/config";
 
-// base "./" keeps every URL relative so dist/ can be served from any sub-path.
+// Relative base so the build works from any sub-path, including the Arcade's.
 export default defineConfig({
   base: "./",
-  build: { outDir: "dist", emptyOutDir: true, target: "es2022", assetsInlineLimit: 0 },
-  test: { include: ["tests/unit/**/*.test.ts"], environment: "node" },
+  build: { outDir: "dist", emptyOutDir: true, target: "es2022" },
+  test: { environment: "node", include: ["tests/unit/**/*.test.ts"] },
 });

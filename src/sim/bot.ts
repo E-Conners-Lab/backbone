@@ -1,49 +1,73 @@
-// A simple scripted player. Used by tests, the seeded-run video, tuning, and (later) attract mode.
-// It only looks at the world and returns commands; it has no special access.
+// A simple scripted player for tests, tuning runs and the recorded videos. It reads the
+// world and returns commands, like a person would; it has no access a person lacks.
 
-import { isPresent, linkBetween, linkKm, linkUtil, type Command, type Site, type World } from "./world";
+import type { Command, Link, Site, World } from "./types";
+import { dirUtilization, findLink, linkLength as km, loadState, presentSites } from "./world";
 
-export function botCommands(w: World): Command[] {
-  if (w.over) return [];
-  if (w.pendingReward) {
-    const unlinked = w.sites.some(s => isPresent(w, s) && degree(w, s.id) === 0);
-    const hot = w.links.some(l => l.up && linkUtil(w, l) > 0.7 && l.tier < w.tuning.tiers.length - 1);
-    return [{ type: "chooseReward", choice: !unlinked && hot && w.fiberKm > 1500 ? "upgrade" : "fiber" }];
+function degrees(world: World): Map<number, number> {
+  const degree = new Map<number, number>();
+  for (const link of world.links) {
+    degree.set(link.a, (degree.get(link.a) ?? 0) + 1);
+    degree.set(link.b, (degree.get(link.b) ?? 0) + 1);
   }
-  if (w.step % w.tuning.stepsPerSec !== 0) return [];   // one decision per second
-
-  const present = w.sites.filter(s => isPresent(w, s));
-  // 1. Connect any site that has no link, to its nearest neighbour that has one (or any, at the start).
-  for (const s of present) {
-    if (degree(w, s.id) > 0) continue;
-    const linked = present.filter(o => o.id !== s.id && degree(w, o.id) > 0);
-    const target = nearest(w, s, linked.length > 0 ? linked : present.filter(o => o.id !== s.id), []);
-    if (target && linkKm(w, s.id, target.id) <= w.fiberKm) return [{ type: "layLink", a: s.id, b: target.id }];
-  }
-  // 2. Spend an upgrade on the busiest link.
-  if (w.upgrades > 0) {
-    const hot = [...w.links].filter(l => l.up && l.tier < w.tuning.tiers.length - 1).sort((x, y) => linkUtil(w, y) - linkUtil(w, x) || x.id - y.id)[0];
-    if (hot && linkUtil(w, hot) >= 0.75) return [{ type: "upgrade", link: hot.id }];
-  }
-  // 3. Give single-homed sites a second link (redundancy).
-  for (const s of present) {
-    if (degree(w, s.id) !== 1) continue;
-    const neighbours = w.links.filter(l => l.a === s.id || l.b === s.id).map(l => (l.a === s.id ? l.b : l.a));
-    const target = nearest(w, s, present.filter(o => o.id !== s.id), neighbours);
-    // Keep a reserve so the next new site can still be connected.
-    if (target && linkKm(w, s.id, target.id) <= w.fiberKm - 1500) return [{ type: "layLink", a: s.id, b: target.id }];
-  }
-  return [];
+  return degree;
 }
 
-const degree = (w: World, id: number): number => w.links.filter(l => l.a === id || l.b === id).length;
+/** The hottest link that can still be upgraded, if any is congested or dropping. */
+function hotLink(world: World): Link | undefined {
+  const top = world.tuning.tiers.length - 1;
+  return world.links
+    .filter((l) => l.up && l.tier < top && loadState(world, l) !== "nominal" && loadState(world, l) !== "busy")
+    .sort((p, q) => {
+      const load = (l: Link): number => Math.max(dirUtilization(world, l, 0), dirUtilization(world, l, 1));
+      return load(q) - load(p) || p.id - q.id;
+    })[0];
+}
 
-function nearest(w: World, from: Site, among: Site[], exclude: number[]): Site | undefined {
-  let best: Site | undefined, bestKm = Infinity;
-  for (const o of among) {
-    if (exclude.includes(o.id) || linkBetween(w, from.id, o.id)) continue;
-    const km = linkKm(w, from.id, o.id);
-    if (km < bestKm) { bestKm = km; best = o; }
+/** Commands the scripted player sends at this step. It acts at most once a second. */
+export function botCommands(world: World): Command[] {
+  if (world.over) return [];
+  const present = presentSites(world);
+  const degree = degrees(world);
+  const expecting = present.length < world.sites.length;
+
+  if (world.rewardPending) {
+    const needsLinks = present.some((s) => (degree.get(s.id) ?? 0) < 2);
+    const wantsUpgrade = hotLink(world) !== undefined && world.upgrades === 0 && !needsLinks;
+    return [{ type: "chooseReward", choice: wantsUpgrade || world.fiberKm > 9000 ? "upgrade" : "fiber" }];
   }
-  return best;
+  if (world.step % world.tuning.stepsPerSec !== 0) return [];
+
+  // 1. A site with no link gets one to the nearest site, preferring sites already connected.
+  for (const site of present) {
+    if ((degree.get(site.id) ?? 0) > 0) continue;
+    const others = present
+      .filter((o) => o.id !== site.id)
+      .sort((p, q) => {
+        const connected = (o: Site): number => ((degree.get(o.id) ?? 0) > 0 ? 0 : 1);
+        return connected(p) - connected(q) || km(site, p) - km(site, q) || p.id - q.id;
+      });
+    const target = others.find((o) => km(site, o) <= world.fiberKm);
+    if (target) return [{ type: "layLink", a: site.id, b: target.id }];
+  }
+
+  // 2. A site hanging by one link gets a second, so one cut cannot leave it dark.
+  const reserve = expecting ? 1500 : 0;
+  if (present.length >= 3) {
+    for (const site of present) {
+      if ((degree.get(site.id) ?? 0) !== 1) continue;
+      const target = present
+        .filter((o) => o.id !== site.id && !findLink(world, site.id, o.id))
+        .sort((p, q) => km(site, p) - km(site, q) || p.id - q.id)
+        .find((o) => km(site, o) <= world.fiberKm - reserve);
+      if (target) return [{ type: "layLink", a: site.id, b: target.id }];
+    }
+  }
+
+  // 3. Spend an upgrade on the hottest link.
+  if (world.upgrades > 0) {
+    const hot = hotLink(world);
+    if (hot) return [{ type: "upgrade", link: hot.id }];
+  }
+  return [];
 }

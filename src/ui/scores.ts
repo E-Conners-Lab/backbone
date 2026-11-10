@@ -1,32 +1,67 @@
-// Local high scores (AC23). Stored on this device only. Anything read back from storage is
-// treated as untrusted input and validated field by field before use.
+// Best scores on this device (FR-023). Stored data is input like any other: everything read
+// back is checked field by field against an allowlist, and anything else is dropped
+// (SEC-11, SEC-12).
 
-export interface ScoreEntry { score: number; seconds: number; seed: string }
+export interface ScoreEntry {
+  score: number;
+  /** Time survived, in simulation steps. */
+  steps: number;
+  seed: string;
+}
 
-const KEY = "backbone.scores.v1";
-const MAX = 5;
 export const SEED_PATTERN = /^[A-Za-z0-9-]{1,24}$/;
+export const SCORES_KEY = "backbone.scores.v1";
+const KEEP = 5;
 
-const isEntry = (e: unknown): e is ScoreEntry => {
-  if (typeof e !== "object" || e === null) return false;
-  const r = e as Record<string, unknown>;
-  return Number.isSafeInteger(r.score) && (r.score as number) >= 0 && Number.isSafeInteger(r.seconds) && (r.seconds as number) >= 0
-    && typeof r.seed === "string" && SEED_PATTERN.test(r.seed);
-};
+const whole = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 1e9;
 
-export function loadScores(): ScoreEntry[] {
+/** Keeps only well-formed entries. */
+export function validScores(raw: unknown): ScoreEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ScoreEntry[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const { score, steps, seed } = item as Record<string, unknown>;
+    if (whole(score) && whole(steps) && typeof seed === "string" && SEED_PATTERN.test(seed)) out.push({ score, steps, seed });
+  }
+  return out;
+}
+
+/** Sorted by score, then by time survived (R12); the best five. */
+export function rank(entries: ScoreEntry[]): ScoreEntry[] {
+  return [...entries].sort((p, q) => q.score - p.score || q.steps - p.steps).slice(0, KEEP);
+}
+
+/** The browser's storage, or null when the device refuses it. */
+export function openStorage(): Storage | null {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(KEY) ?? "[]");
-    return Array.isArray(raw) ? raw.filter(isEntry).map(e => ({ score: e.score, seconds: e.seconds, seed: e.seed })).sort(order).slice(0, MAX) : [];
-  } catch { return []; }
+    const store = window.localStorage;
+    const probe = "backbone.probe";
+    store.setItem(probe, "1");
+    store.removeItem(probe);
+    return store;
+  } catch {
+    return null;
+  }
 }
 
-/** R12: sorted by score, then by time survived. Returns the new table. */
-export function saveScore(entry: ScoreEntry): ScoreEntry[] {
-  const table = [...loadScores(), entry].sort(order).slice(0, MAX);
-  try { localStorage.setItem(KEY, JSON.stringify(table)); } catch { /* storage unavailable: scores last for this session only */ }
-  return table;
+export function loadScores(store: Pick<Storage, "getItem"> | null): ScoreEntry[] {
+  if (!store) return [];
+  try {
+    return rank(validScores(JSON.parse(store.getItem(SCORES_KEY) ?? "[]")));
+  } catch {
+    return [];
+  }
 }
 
-const order = (a: ScoreEntry, b: ScoreEntry): number => b.score - a.score || b.seconds - a.seconds;
-export const formatTime = (seconds: number): string => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+/** Adds a score and returns the new table. `saved` is false when the device refused. */
+export function saveScore(store: Pick<Storage, "getItem" | "setItem"> | null, entry: ScoreEntry): { entries: ScoreEntry[]; saved: boolean } {
+  const entries = rank([...loadScores(store), ...validScores([entry])]);
+  if (!store) return { entries, saved: false };
+  try {
+    store.setItem(SCORES_KEY, JSON.stringify(entries));
+    return { entries, saved: true };
+  } catch {
+    return { entries, saved: false };
+  }
+}

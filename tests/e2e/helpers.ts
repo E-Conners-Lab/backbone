@@ -1,61 +1,269 @@
-import type { CDPSession, Page } from "@playwright/test";
+// Shared by the end-to-end tests. Everything a test does to the game goes through real
+// input (mouse, touch, keys); the test hook is used to read state and to let time pass.
 
-export interface Snapshot {
-  mode: string; step: number; delivered: number; meterMilli: number; over: boolean; paused: boolean; pending: number;
-  links: { id: number; a: string; b: string; cost: number; tier: number; up: boolean }[];
-  sites: { id: number; code: string; x: number; y: number }[];
-  linkMids: { id: number; x: number; y: number }[];
-  fiberKm: number; upgrades: number; renderer: string; reduced: boolean; rewardPending: boolean; toast: string | null;
-  lapseStep: number | null; seed: string; logLength: number;
+import { mkdirSync, writeFileSync } from "node:fs";
+import { expect, type CDPSession, type Page, type TestInfo } from "@playwright/test";
+import { census } from "./census";
+
+export interface HookState {
+  screen: string;
+  seed: string | null;
+  step: number;
+  score: number;
+  emitted: number;
+  dropped: { queue: number; cut: number; noRoute: number };
+  meter: number;
+  meterSize: number;
+  fiberKm: number;
+  plannedFiberKm: number;
+  upgrades: number;
+  paused: boolean;
+  pending: number;
+  pendingCommands: string[];
+  over: boolean;
+  rewardPending: boolean;
+  renderer: string;
+  reducedMotion: boolean;
+  speed: number;
+  logLength: number;
+  lapse: { step: number; total: number; playing: boolean; score: number } | null;
 }
 
-/** Reads game state through the read-only test handle. Screen positions come from the live scene. */
-export const snap = (page: Page): Promise<Snapshot> => page.evaluate(() => {
-  const b = (window as unknown as { __backbone: any }).__backbone, g = b.game, w = g.world, scene = b.scene;
-  const code = (id: number): string => w.sites.find((s: any) => s.id === id)?.code ?? "?";
-  return {
-    mode: g.mode, step: w.step, delivered: w.delivered, meterMilli: w.meterMilli, over: w.over, paused: g.paused, pending: g.pending.length,
-    links: w.links.map((l: any) => ({ id: l.id, a: code(l.a), b: code(l.b), cost: l.cost, tier: l.tier, up: l.up })),
-    sites: (scene?.sites ?? []).map((s: any) => ({ id: s.id, code: code(s.id), x: s.x, y: s.y })),
-    linkMids: (scene?.links ?? []).map((l: any) => ({ id: l.id, x: (l.x0 + l.x1) / 2, y: (l.y0 + l.y1) / 2 })),
-    fiberKm: w.fiberKm, upgrades: w.upgrades, renderer: b.renderer, reduced: b.reduced, rewardPending: w.pendingReward !== null,
-    toast: g.toast ? g.toast.text : null, lapseStep: g.lapse ? g.lapse.world.step : null, seed: g.seedText, logLength: g.log.length,
-  };
-});
+export interface HookSite {
+  id: number;
+  code: string;
+  x: number;
+  y: number;
+  state: string;
+}
 
-export const setBot = (page: Page, on: boolean, speed: number): Promise<void> =>
-  page.evaluate(([o, s]) => { const g = (window as unknown as { __backbone: any }).__backbone.game; g.bot = o; g.speed = s; }, [on, speed] as const);
+export interface HookLink {
+  id: number;
+  a: number;
+  b: number;
+  x: number;
+  y: number;
+  cost: number;
+  pendingCost: number | null;
+  tier: number;
+  look: string;
+  pending: string | null;
+  km: number;
+  utilAB: number;
+  utilBA: number;
+}
 
-export const exportRun = (page: Page): Promise<{ seed: string; log: unknown[]; finalStep: number; delivered: number }> => page.evaluate(() => {
-  const g = (window as unknown as { __backbone: any }).__backbone.game;
-  return { seed: g.seedText, log: JSON.parse(JSON.stringify(g.log)), finalStep: g.world.step, delivered: g.world.delivered };
-});
+interface Hook {
+  state(): HookState;
+  sites(): HookSite[];
+  links(): HookLink[];
+  linkLoads(): { id: number; a: number; b: number; pairs: Record<string, number> }[];
+  routes(from: number): Record<number, { cost: number; nextHops: number[] }>;
+  report(): { links: number; pulses: number; sites: number; effects: number; labels: number; icons: number };
+  scene(): { sweep: boolean; pulses: number; trails: number; effects: string[]; looks: string[]; siteStates: string[]; width: number; height: number };
+  advance(steps: number): void;
+}
 
-/** A real drag from one point to another: mouse on desktop, a touch sequence on the phone. */
-export async function drag(page: Page, touch: boolean, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
-  const steps = 8;
-  if (!touch) {
-    await page.mouse.move(from.x, from.y); await page.mouse.down();
-    for (let i = 1; i <= steps; i++) await page.mouse.move(from.x + (to.x - from.x) * i / steps, from.y + (to.y - from.y) * i / steps);
-    await page.mouse.up();
-    return;
+declare global {
+  interface Window {
+    __backbone: Hook;
   }
-  const cdp = await page.context().newCDPSession(page);
-  const point = (x: number, y: number) => [{ x, y, id: 1 }];
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: point(from.x, from.y) });
-  for (let i = 1; i <= steps; i++)
-    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: point(from.x + (to.x - from.x) * i / steps, from.y + (to.y - from.y) * i / steps) });
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await cdp.detach();
 }
 
-export async function tap(page: Page, touch: boolean, at: { x: number; y: number }): Promise<void> {
-  if (touch) await page.touchscreen.tap(at.x, at.y); else await page.mouse.click(at.x, at.y);
+export const isPhone = (info: TestInfo): boolean => info.project.name === "phone";
+
+/** Opens the game with the test hook and waits until it is drawing. */
+export async function open(page: Page, query = ""): Promise<void> {
+  await page.goto(`./?test=1${query ? `&${query}` : ""}`);
+  await page.waitForFunction(() => typeof window.__backbone === "object");
+  await page.waitForFunction(() => window.__backbone.scene().width > 0);
 }
 
-export async function pinch(cdp: CDPSession, cx: number, cy: number, from: number, to: number): Promise<void> {
-  const pts = (d: number) => [{ x: cx - d, y: cy, id: 1 }, { x: cx + d, y: cy, id: 2 }];
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: pts(from) });
-  for (let i = 1; i <= 6; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: pts(from + (to - from) * i / 6) });
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+export const state = (page: Page): Promise<HookState> => page.evaluate(() => window.__backbone.state());
+export const sites = (page: Page): Promise<HookSite[]> => page.evaluate(() => window.__backbone.sites());
+export const links = (page: Page): Promise<HookLink[]> => page.evaluate(() => window.__backbone.links());
+export const scene = (page: Page) => page.evaluate(() => window.__backbone.scene());
+export const report = (page: Page) => page.evaluate(() => window.__backbone.report());
+export const linkLoads = (page: Page) => page.evaluate(() => window.__backbone.linkLoads());
+/** The scene and what the renderer drew for it, read in one go so both are the same frame. */
+export const snapshot = (page: Page) => page.evaluate(() => ({ scene: window.__backbone.scene(), drawn: window.__backbone.report() }));
+export const routes = (page: Page, from: number) => page.evaluate((id) => window.__backbone.routes(id), from);
+
+/** Lets simulated time pass. One animation frame afterwards so the screen is up to date. */
+export async function advance(page: Page, steps: number): Promise<void> {
+  await page.evaluate((n) => window.__backbone.advance(n), steps);
+  await frame(page);
+}
+
+export async function frame(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)))));
+}
+
+const sessions = new WeakMap<Page, Promise<CDPSession>>();
+
+/** A touch gesture through the browser's own touch input, so the page sees real pointer events. */
+async function touch(page: Page, type: "touchStart" | "touchMove" | "touchEnd", points: { x: number; y: number }[]): Promise<void> {
+  // One session per page: a gesture's start, moves and end must travel on the same session.
+  let session = sessions.get(page);
+  if (!session) {
+    session = page.context().newCDPSession(page);
+    sessions.set(page, session);
+  }
+  await (await session).send("Input.dispatchTouchEvent", { type, touchPoints: points.map((p, id) => ({ x: Math.round(p.x), y: Math.round(p.y), id })) });
+}
+
+/** Drags from one point to another: with a finger on the phone project, with the mouse otherwise. */
+export async function drag(page: Page, info: TestInfo, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
+  const steps = 6;
+  const at = (i: number) => ({ x: from.x + ((to.x - from.x) * i) / steps, y: from.y + ((to.y - from.y) * i) / steps });
+  if (isPhone(info)) {
+    await touch(page, "touchStart", [from]);
+    for (let i = 1; i <= steps; i++) await touch(page, "touchMove", [at(i)]);
+    await touch(page, "touchEnd", []);
+  } else {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (let i = 1; i <= steps; i++) await page.mouse.move(at(i).x, at(i).y);
+    await page.mouse.up();
+  }
+  await frame(page);
+}
+
+/** A tap or a click at a point. */
+export async function tap(page: Page, info: TestInfo, at: { x: number; y: number }): Promise<void> {
+  if (isPhone(info)) await page.touchscreen.tap(at.x, at.y);
+  else await page.mouse.click(at.x, at.y);
+  await frame(page);
+}
+
+/** Two fingers moving from one pair of points to another: a pinch or a two-finger drag. */
+export async function twoFingers(page: Page, from: [{ x: number; y: number }, { x: number; y: number }], to: [{ x: number; y: number }, { x: number; y: number }]): Promise<void> {
+  const steps = 6;
+  const mix = (p: { x: number; y: number }, q: { x: number; y: number }, i: number) => ({ x: p.x + ((q.x - p.x) * i) / steps, y: p.y + ((q.y - p.y) * i) / steps });
+  await touch(page, "touchStart", [from[0], from[1]]);
+  for (let i = 1; i <= steps; i++) await touch(page, "touchMove", [mix(from[0], to[0], i), mix(from[1], to[1], i)]);
+  await touch(page, "touchEnd", []);
+  await frame(page);
+}
+
+/** A site's place on screen. Waits for the next drawn frame if the site is not there yet. */
+export async function site(page: Page, id: number): Promise<HookSite> {
+  for (let i = 0; i < 20; i++) {
+    const found = (await sites(page)).find((s) => s.id === id);
+    if (found) return found;
+    await frame(page);
+  }
+  throw new Error(`site ${id} is not on the map`);
+}
+
+/** Lays a link by dragging between two sites, and checks that it was accepted. */
+export async function lay(page: Page, info: TestInfo, a: number, b: number): Promise<void> {
+  const before = (await links(page)).length;
+  await drag(page, info, await site(page, a), await site(page, b));
+  await expect.poll(async () => (await links(page)).length, { message: `link ${a}–${b} laid` }).toBe(before + 1);
+  // While the game runs the link is pending for at most one step. Wait until it has reached
+  // the simulation, so that a caller can read the world straight afterwards.
+  await expect
+    .poll(async () => {
+      const s = await state(page);
+      return s.paused || s.rewardPending || s.pending === 0;
+    })
+    .toBe(true);
+}
+
+/** The newest messages on screen. */
+export const messages = (page: Page): Promise<string[]> => page.locator("#messages .message").allTextContents();
+
+/** Answers a pending reward by pressing its button. */
+export async function takeReward(page: Page, choice: "fiber" | "upgrade"): Promise<void> {
+  await expect(page.locator("#reward")).toBeVisible();
+  await page.locator(choice === "fiber" ? "#reward-fiber" : "#reward-upgrade").click();
+  await expect(page.locator("#reward")).toBeHidden();
+}
+
+/**
+ * Lets time pass up to a step, in small pieces. Between pieces it does what a careful
+ * player would: links any site that has no link, and takes fiber when a reward is offered.
+ */
+export async function playTo(page: Page, info: TestInfo, untilStep: number, options: { connect?: boolean; reward?: "fiber" | "upgrade" } = {}): Promise<void> {
+  for (let guard = 0; guard < 2000; guard++) {
+    const s = await state(page);
+    if (s.over || s.step >= untilStep) return;
+    if (s.rewardPending) {
+      await takeReward(page, options.reward ?? "fiber");
+      continue;
+    }
+    if (options.connect !== false) {
+      const all = await sites(page);
+      const linked = new Set((await links(page)).flatMap((l) => [l.a, l.b]));
+      const lonely = all.find((x) => !linked.has(x.id));
+      const anchor = all.find((x) => linked.has(x.id)) ?? all.find((x) => x.id !== lonely?.id);
+      if (lonely && anchor && all.length > 1) {
+        await lay(page, info, lonely.id, anchor.id);
+        continue;
+      }
+    }
+    await advance(page, Math.min(40, untilStep - s.step));
+  }
+  throw new Error("playTo did not finish");
+}
+
+export interface CensusResult {
+  project: string;
+  renderer: string;
+  worst: { green: number; red: number };
+  shots: { moment: string; green: number; red: number; colored: number }[];
+}
+
+/**
+ * Plays a scripted run and takes the color census of a full-page screenshot at five moments
+ * (FR-032b). The numbers are written to test-results/ so they can be reported as they are.
+ */
+export async function censusRun(page: Page, info: TestInfo, query: string): Promise<CensusResult> {
+  await open(page, `autostart=1&seed=stage-1&bot=1${query ? `&${query}` : ""}`);
+  const shots: CensusResult["shots"] = [];
+  const take = async (moment: string): Promise<void> => {
+    await frame(page);
+    const c = census(await page.screenshot());
+    shots.push({ moment, green: c.greenShare, red: c.redShare, colored: c.colored });
+  };
+  await advance(page, 1500);
+  await take("early run");
+  // The moment of a fiber cut: the spark and the ripple are on screen.
+  await advance(page, 1480);
+  for (let i = 0; i < 500 && !(await links(page)).some((l) => l.look === "cut"); i++) await advance(page, 1);
+  await take("fiber cut");
+  await advance(page, 3600);
+  await take("congested");
+  await page.keyboard.press("Space");
+  await take("paused with the inspector");
+  for (let i = 0; i < 200 && !(await state(page)).over; i++) await advance(page, 200);
+  await take("game over");
+  const renderer = (await state(page)).renderer;
+  const result: CensusResult = {
+    project: info.project.name,
+    renderer,
+    worst: { green: Math.max(...shots.map((s) => s.green)), red: Math.max(...shots.map((s) => s.red)) },
+    shots,
+  };
+  mkdirSync("test-results", { recursive: true });
+  writeFileSync(`test-results/census-${info.project.name}-${renderer}.json`, JSON.stringify(result, null, 2));
+  info.annotations.push({ type: "census", description: `${renderer}: worst green ${(result.worst.green * 100).toFixed(4)}%, worst red ${(result.worst.red * 100).toFixed(4)}%` });
+  return result;
+}
+
+/**
+ * Lets a run play out to game over, taking fiber whenever a reward is offered. The reward
+ * button is pressed only while its dialog is on screen: the game may already have taken the
+ * choice by the time the test looks again.
+ */
+export async function toGameOver(page: Page): Promise<void> {
+  for (let i = 0; i < 600 && !(await state(page)).over; i++) {
+    if ((await state(page)).rewardPending && (await page.locator("#reward").isVisible())) {
+      await page.locator("#reward-fiber").click({ timeout: 3000 }).catch(() => undefined);
+    } else {
+      await advance(page, 200);
+    }
+  }
+  expect((await state(page)).over).toBe(true);
 }

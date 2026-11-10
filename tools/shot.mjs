@@ -1,19 +1,36 @@
-// Dev aid: screenshots of the built game. Usage: node tools/shot.mjs <outDir> [query] [waitMs]
-// Serves nothing itself: start `python3 -m http.server 4173 --bind 127.0.0.1 --directory dist` first.
+// Takes a screenshot of the built game, for looking at it during development.
+//   node tools/shot.mjs <out.png> <width>x<height> "<query>" [wait ms] [key …]
+// Serves dist/ itself on a free port (tools/serve-dist.mjs), so nothing else needs to be running.
+
 import { chromium } from "@playwright/test";
-const [outDir = ".", query = "", waitMs = "3000"] = process.argv.slice(2);
-const browser = await chromium.launch();
-for (const [name, width, height, touch] of [["desktop", 1920, 1080, false], ["phone", 844, 390, true]]) {
-  const page = await browser.newPage({ viewport: { width, height }, hasTouch: touch, deviceScaleFactor: 1 });
-  const errors = [];
-  page.on("pageerror", e => errors.push(String(e)));
-  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:4173/${query}`);
-  await page.waitForTimeout(Number(waitMs));
-  await page.screenshot({ path: `${outDir}/${name}.png` });
-  const state = await page.evaluate(() => { const b = window.__backbone; const w = b.game.world;
-    return { mode: b.game.mode, step: w.step, delivered: w.delivered, links: w.links.length, meter: w.meterMilli, frameMs: Math.round(b.frameMs() * 10) / 10, renderer: b.renderer }; });
-  console.log(name, JSON.stringify(state), errors.length ? "ERRORS: " + errors.join(" | ") : "no page errors");
-  await page.close();
+import { serveDist } from "./serve-dist.mjs";
+
+const [out, size = "1920x1080", query = "", wait = "1500", ...keys] = process.argv.slice(2);
+if (!out) {
+  console.error('usage: node tools/shot.mjs <out.png> <width>x<height> "<query>" [wait ms] [key …]');
+  process.exit(2);
 }
-await browser.close();
+const [width, height] = size.split("x").map(Number);
+const server = await serveDist();
+try {
+  const browser = await chromium.launch();
+  const phone = width < 1000;
+  const page = await browser.newPage({ viewport: { width, height }, hasTouch: phone, isMobile: phone });
+  const problems = [];
+  page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`console: ${message.text()}`);
+  });
+  await page.goto(`${server.url}${query}`);
+  await page.waitForTimeout(Number(wait));
+  for (const key of keys) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(300);
+  }
+  await page.screenshot({ path: out });
+  const state = await page.evaluate(() => (window.__backbone ? window.__backbone.state() : null));
+  console.log(JSON.stringify({ out, state, problems }));
+  await browser.close();
+} finally {
+  server.stop();
+}

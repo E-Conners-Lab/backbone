@@ -1,41 +1,81 @@
-// Records the final-verification videos: a seeded run from start to game over, at desktop and
-// phone sizes, driven by the scripted player. The simulation runs at a multiple of its fixed
-// step, so the run is the same run it would be in real time (PLAN: verification).
-// Usage: node tools/record-run.mjs <seed> <speed>     (needs dist/ served at http://127.0.0.1:4173 and ffmpeg)
-import { chromium } from "@playwright/test";
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+// Records the seeded-run videos (SC-005, C7 evidence): the scripted player on a fixed seed,
+// from start to game over and through the time-lapse, at phone and desktop sizes.
+//
+//   npm run build && npm run record [seed]
+//
+// Writes docs/verification/run-<seed>-844x390.mp4 and run-<seed>-1920x1080.mp4, and prints
+// the final numbers of each run. The simulation runs at 4 times real speed; the speed is a
+// multiple of the same fixed step, so the run is the same run as at real speed.
 
-const [seed = "stage-1", speed = "4"] = process.argv.slice(2);
-const outDir = "docs/verification";
-mkdirSync(outDir, { recursive: true });
-const browser = await chromium.launch();
-const results = [];
-for (const [name, width, height, touch] of [["desktop-1920x1080", 1920, 1080, false], ["phone-844x390", 844, 390, true]]) {
-  const tmp = mkdtempSync(join(tmpdir(), "backbone-video-"));
-  const context = await browser.newContext({ viewport: { width, height }, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1, recordVideo: { dir: tmp, size: { width, height } } });
-  const page = await context.newPage();
-  const errors = [];
-  page.on("pageerror", e => errors.push(String(e)));
-  await page.goto("http://127.0.0.1:4173/");
-  await page.waitForTimeout(2500);                                   // the welcome screen
-  await page.fill("#seedInput", seed);
-  await page.waitForTimeout(600);
-  await (touch ? page.tap("#startBtn") : page.click("#startBtn"));
-  await page.evaluate(s => { const g = window.__backbone.game; g.bot = true; g.speed = s; }, Number(speed));
-  await page.waitForFunction(() => window.__backbone.game.mode === "over", null, { timeout: 600000, polling: 500 });
-  const result = await page.evaluate(() => { const b = window.__backbone, w = b.game.world;
-    return { delivered: w.delivered, dropped: w.dropped, steps: w.step, seconds: Math.floor(w.step / w.tuning.stepsPerSec), links: w.links.length, renderer: b.renderer, commands: b.game.log.length }; });
-  await page.waitForTimeout(17000);                                  // score panel and one pass of the time-lapse
-  await context.close();
-  const webm = join(tmp, readdirSync(tmp).find(f => f.endsWith(".webm")));
-  const mp4 = join(outDir, `run-${seed}-${name}.mp4`);
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", webm, "-c:v", "libx264", "-preset", "slow", "-crf", "27", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", mp4]);
-  rmSync(tmp, { recursive: true, force: true });
-  results.push({ size: name, seed, speed: Number(speed), ...result, video: mp4, videoBytes: statSync(mp4).size, pageErrors: errors });
-  console.log(JSON.stringify(results.at(-1)));
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "@playwright/test";
+import { serveDist } from "./serve-dist.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const seed = /^[A-Za-z0-9-]{1,24}$/.test(process.argv[2] ?? "") ? process.argv[2] : "stage-1";
+const SPEED = 4;
+const SIZES = [
+  { name: "844x390", width: 844, height: 390, phone: true },
+  { name: "1920x1080", width: 1920, height: 1080, phone: false },
+];
+// The server comes first: if it cannot start, nothing has been made that needs clearing away.
+// Everything after it is inside the try, so the server and the folder never outlive a failure.
+const server = await serveDist();
+let work = null;
+
+try {
+  work = mkdtempSync(join(tmpdir(), "backbone-video-"));
+  const browser = await chromium.launch();
+  for (const size of SIZES) {
+    const context = await browser.newContext({
+      viewport: { width: size.width, height: size.height },
+      hasTouch: size.phone,
+      isMobile: size.phone,
+      recordVideo: { dir: work, size: { width: size.width, height: size.height } },
+    });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(`${server.url}?test=1&autostart=1&bot=1&speed=${SPEED}&seed=${seed}`);
+    await page.waitForFunction(() => typeof window.__backbone === "object" && window.__backbone.state().over, null, { timeout: 15 * 60 * 1000, polling: 500 });
+    // Stay for the time-lapse, then a moment on the finished screen.
+    await page.waitForFunction(() => window.__backbone.state().lapse !== null && !window.__backbone.state().lapse.playing, null, { timeout: 60 * 1000, polling: 250 });
+    await page.waitForTimeout(2500);
+    const state = await page.evaluate(() => window.__backbone.state());
+    const video = page.video();
+    await context.close();
+    const webm = await video.path();
+    const out = join(root, "docs", "verification", `run-${seed}-${size.name}.mp4`);
+    const encode = spawnSync(
+      "ffmpeg",
+      ["-loglevel", "error", "-y", "-i", webm, "-c:v", "libx264", "-preset", "slow", "-crf", "30", "-pix_fmt", "yuv420p", "-r", "25", "-movflags", "+faststart", "-an", out],
+      { stdio: "inherit" },
+    );
+    if (encode.status !== 0) throw new Error("ffmpeg failed");
+    const seconds = Math.floor(state.step / state.stepsPerSec);
+    console.log(
+      JSON.stringify({
+        video: `docs/verification/run-${seed}-${size.name}.mp4`,
+        bytes: statSync(out).size,
+        seed,
+        speed: SPEED,
+        renderer: state.renderer,
+        delivered: state.score,
+        time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
+        steps: state.step,
+        dropped: state.dropped,
+        inputs: state.logLength,
+        timeLapseScore: state.lapse.score,
+        pageErrors: errors,
+      }),
+    );
+  }
+  await browser.close();
+} finally {
+  server.stop();
+  if (work) rmSync(work, { recursive: true, force: true });
 }
-await browser.close();
-writeFileSync(join(outDir, `run-${seed}.json`), JSON.stringify(results, null, 2) + "\n");

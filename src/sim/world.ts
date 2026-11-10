@@ -1,425 +1,582 @@
-// The simulation. Pure logic: no DOM, no clock, no Math.random, no renderer (constitution C5).
-// step() is the only function that advances time. Same world + same commands -> same world (R13).
+// The run: sites, links, traffic, events, the drop meter and the score. `step` is the only
+// function that advances time, and it does its work in the fixed order written in
+// specs/001-backbone-first-playable/contracts/simulation.md.
 
-import { pickNextHop, type Rotors } from "./forwarding";
-import { advanceDir, enqueue, flushDir, newDir, type Dir, type Packet } from "./linkq";
-import { nextFloat, nextInt, seedFromString, type RngState } from "./rng";
-import { computeRoutes, isValidCost, type Routes } from "./spf";
+import { pickNextHop } from "./forwarding";
+import { beginStep, newDirection, offer, refusedInWindow, serve, utilization } from "./linkq";
+import { nextInt, nextRange, nextU32, seedRng } from "./rng";
+import { computeRoutes } from "./spf";
+import type {
+  Command,
+  Direction,
+  DropCounts,
+  Link,
+  LinkId,
+  Packet,
+  Reason,
+  Region,
+  Site,
+  SiteId,
+  StepEvents,
+  Tuning,
+  World,
+} from "./types";
 
-// ---------- content and tuning ----------
+/** New links get cost 10 (S6, FR-015). This is a rule of the model, not a tuning constant. */
+export const DEFAULT_LINK_COST = 10;
+/** Link cost is a whole number from 1 to 65535 (F2). */
+export const MIN_COST = 1;
+export const MAX_COST = 65535;
 
-export interface SiteDef { code: string; name: string; lon: number; lat: number; weight: number }
-export interface Region { id: string; name: string; sites: SiteDef[] }
-
-/** Play-balance constants (SPEC: "tunable"). Not rules. */
-export interface Tuning {
-  stepsPerSec: number;
-  defaultCost: number;
-  /** Packets per second per direction, by tier. */
-  tiers: number[];
-  queueLen: number;
-  congestionAt: number;
-  utilWindowSec: number;
-  meterMax: number;
-  drainPerSec: number;
-  drainDelaySec: number;
-  rewardEverySec: number;
-  rewardFiberKm: number;
-  graceSec: number;
-  firstCutSec: number;
-  cutGapSec: [number, number];
-  cutDurationSec: [number, number];
-  startFiberKm: number;
-  startUpgrades: number;
-  startSites: number;
-  maxSites: number;
-  siteEverySec: number;
-  /** Per-site emission in thousandths of a packet per second, at weight 1. */
-  baseRateMilli: number;
-  rateGrowthMilliPerMin: number;
-  /** How fast a pulse travels along a link. */
-  kmPerSec: number;
-  /** Equal-cost next hops each router keeps. 1 in v1 (SPEC F4, Q3). */
-  maxPaths: number;
+export interface WorldOptions {
+  /** Routes kept per destination. 1 in v1 play (F4, Q3). */
+  maxPaths?: number;
+  /** Take the region's sites in file order instead of letting the seed choose. For tests and hand traces. */
+  inOrder?: boolean;
 }
 
-export const DEFAULT_TUNING: Tuning = {
-  stepsPerSec: 20,
-  defaultCost: 10,
-  tiers: [4, 8, 16],
-  queueLen: 8,
-  congestionAt: 0.9,
-  utilWindowSec: 2,
-  meterMax: 100,
-  drainPerSec: 1,
-  drainDelaySec: 3,
-  rewardEverySec: 60,
-  rewardFiberKm: 3000,
-  graceSec: 20,
-  firstCutSec: 150,
-  cutGapSec: [50, 80],
-  cutDurationSec: [12, 25],
-  startFiberKm: 8000,
-  startUpgrades: 1,
-  startSites: 3,
-  maxSites: 12,
-  siteEverySec: 40,
-  baseRateMilli: 500,
-  rateGrowthMilliPerMin: 200,
-  kmPerSec: 1400,
-  maxPaths: 1,
-};
+export type LoadState = "nominal" | "busy" | "congested" | "dropping";
 
-// ---------- state ----------
-
-export interface Site {
-  /** Router ID: 1, 2, 3... in order of appearance. */
-  id: number;
-  code: string;
-  name: string;
-  lon: number;
-  lat: number;
-  weight: number;
-  appearStep: number;
-  /** Starts sending and receiving at this step (grace period, R1 of the loop). */
-  activeStep: number;
-  /** Emission accumulator in milli-packets x stepsPerSec. */
-  acc: number;
-}
-
-export interface Link {
-  id: number;
-  a: number;
-  b: number;
-  km: number;
-  cost: number;
-  tier: number;
-  up: boolean;
-  /** Step at which a cut link is restored; 0 when up. */
-  restoreStep: number;
-  /** dirs[0] carries a->b, dirs[1] carries b->a. Independent (R4). */
-  dirs: [Dir, Dir];
-}
-
-export type RewardKind = "fiber" | "upgrade";
-export type DropReason = "queue" | "cut" | "noroute";
-
-export interface World {
-  seedText: string;
-  rng: RngState;
-  tuning: Tuning;
-  step: number;
-  sites: Site[];
-  links: Link[];
-  nextLinkId: number;
-  nextPacketId: number;
-  routes: Routes;
-  rotors: Rotors;
-  fiberKm: number;
-  upgrades: number;
-  delivered: number;
-  dropped: Record<DropReason, number>;
-  /** Drop meter in thousandths of a drop. */
-  meterMilli: number;
-  lastDropStep: number;
-  nextRewardStep: number;
-  pendingReward: RewardKind[] | null;
-  nextCutStep: number;
-  over: boolean;
-}
-
-// ---------- commands ----------
-
-export type Command =
-  | { type: "layLink"; a: number; b: number }
-  | { type: "removeLink"; link: number }
-  | { type: "setCost"; link: number; cost: number }
-  | { type: "upgrade"; link: number }
-  | { type: "chooseReward"; choice: RewardKind };
-
-export type RejectReason =
-  | "game-over" | "unknown-site" | "same-site" | "duplicate-link" | "not-enough-fiber"
-  | "unknown-link" | "link-is-cut" | "bad-cost" | "no-upgrades" | "max-tier" | "no-reward-pending" | "bad-choice";
-
-export type StepEvent =
-  | { type: "reject"; reason: RejectReason; command: Command }
-  | { type: "linkLaid"; link: number }
-  | { type: "linkRemoved"; link: number; a: number; b: number }
-  | { type: "costSet"; link: number; cost: number }
-  | { type: "upgraded"; link: number; tier: number }
-  | { type: "rewardTaken"; choice: RewardKind }
-  | { type: "rewardOffered" }
-  | { type: "siteAppeared"; site: number }
-  | { type: "siteActive"; site: number }
-  | { type: "cut"; link: number; lost: number }
-  | { type: "restored"; link: number }
-  | { type: "rerouted" }
-  | { type: "delivered"; at: number }
-  | { type: "drop"; reason: DropReason; at: number; link?: number }
-  | { type: "over" };
-
-// ---------- helpers ----------
-
-export function haversineKm(lon1: number, lat1: number, lon2: number, lat2: number): number {
-  const rad = Math.PI / 180;
-  const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
-  return Math.round(2 * 6371 * Math.asin(Math.sqrt(h)));
-}
-
-export const siteById = (w: World, id: number): Site | undefined => w.sites.find(s => s.id === id);
-export const linkById = (w: World, id: number): Link | undefined => w.links.find(l => l.id === id);
-export const linkBetween = (w: World, a: number, b: number): Link | undefined =>
-  w.links.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
-export const isPresent = (w: World, s: Site): boolean => s.appearStep <= w.step;
-export const isActive = (w: World, s: Site): boolean => s.activeStep <= w.step;
-export const presentSites = (w: World): Site[] => w.sites.filter(s => isPresent(w, s));
-export const capacityOf = (w: World, l: Link): number => w.tuning.tiers[l.tier] ?? w.tuning.tiers[0]!;
-export const linkKm = (w: World, a: number, b: number): number => {
-  const sa = siteById(w, a), sb = siteById(w, b);
-  return sa && sb ? haversineKm(sa.lon, sa.lat, sb.lon, sb.lat) : Infinity;
-};
-
-/** Utilization of one direction over the display window, 0..1 (R5). */
-export function dirUtil(w: World, l: Link, d: 0 | 1): number {
-  const windowSteps = l.dirs[d].hist.length;
-  const max = capacityOf(w, l) * windowSteps / w.tuning.stepsPerSec;
-  return max > 0 ? Math.min(1, l.dirs[d].histSum / max) : 0;
-}
-export const linkUtil = (w: World, l: Link): number => Math.max(dirUtil(w, l, 0), dirUtil(w, l, 1));
-
-/** R8: an active site with no path to any other active site. */
-export function isDark(w: World, s: Site): boolean {
-  if (!isActive(w, s)) return false;
-  const others = w.sites.filter(o => o.id !== s.id && isActive(w, o));
-  if (others.length === 0) return false;
-  const table = w.routes.get(s.id);
-  return !others.some(o => table?.has(o.id));
-}
-
-export interface Score { score: number; seconds: number; time: string; dropped: number }
-/** R12: score is packets delivered; time survived is recorded beside it. */
-export function scoreOf(delivered: number, droppedTotal: number, steps: number, stepsPerSec: number): Score {
-  const seconds = Math.floor(steps / stepsPerSec);
-  return { score: delivered, seconds, time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, dropped: droppedTotal };
-}
-export const totalDropped = (w: World): number => w.dropped.queue + w.dropped.cut + w.dropped.noroute;
-export const worldScore = (w: World): Score => scoreOf(w.delivered, totalDropped(w), w.step, w.tuning.stepsPerSec);
-
-function recomputeRoutes(w: World): void {
-  w.routes = computeRoutes(presentSites(w).map(s => s.id), w.links, w.tuning.maxPaths);
-  w.rotors = {};
-}
-
-// ---------- creation ----------
-
-export function createWorld(seedText: string, region: Region, tuning: Tuning = DEFAULT_TUNING): World {
-  const rng: RngState = { s: seedFromString(`${region.id}:${seedText}`) };
-  const sps = tuning.stepsPerSec;
-  // Seeded shuffle decides which sites appear, and in what order.
-  const pool = region.sites.map(s => ({ ...s }));
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = nextInt(rng, 0, i);
-    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
-  }
-  const sites: Site[] = pool.slice(0, Math.min(tuning.maxSites, pool.length)).map((def, i) => {
-    const appearStep = i < tuning.startSites ? 0 : (i - tuning.startSites + 1) * tuning.siteEverySec * sps;
-    return { id: i + 1, ...def, appearStep, activeStep: appearStep + tuning.graceSec * sps, acc: 0 };
-  });
-  const w: World = {
-    seedText, rng, tuning, step: 0, sites, links: [], nextLinkId: 1, nextPacketId: 1,
-    routes: new Map(), rotors: {}, fiberKm: tuning.startFiberKm, upgrades: tuning.startUpgrades,
-    delivered: 0, dropped: { queue: 0, cut: 0, noroute: 0 }, meterMilli: 0, lastDropStep: -1,
-    nextRewardStep: tuning.rewardEverySec * sps, pendingReward: null,
-    nextCutStep: tuning.firstCutSec * sps, over: false,
-  };
-  recomputeRoutes(w);
-  return w;
-}
-
-// ---------- commands ----------
-
-/** Validates and applies one command. Returns the events it caused; a rejection changes nothing. */
-export function applyCommand(w: World, c: Command): StepEvent[] {
-  const reject = (reason: RejectReason): StepEvent[] => [{ type: "reject", reason, command: c }];
-  if (w.over) return reject("game-over");
-  switch (c.type) {
-    case "layLink": {
-      const a = siteById(w, c.a), b = siteById(w, c.b);
-      if (!a || !b || !isPresent(w, a) || !isPresent(w, b)) return reject("unknown-site");
-      if (a.id === b.id) return reject("same-site");
-      if (linkBetween(w, a.id, b.id)) return reject("duplicate-link");
-      const km = haversineKm(a.lon, a.lat, b.lon, b.lat);
-      if (km > w.fiberKm) return reject("not-enough-fiber");
-      w.fiberKm -= km;
-      const windowSteps = w.tuning.utilWindowSec * w.tuning.stepsPerSec;
-      const link: Link = { id: w.nextLinkId++, a: Math.min(a.id, b.id), b: Math.max(a.id, b.id), km, cost: w.tuning.defaultCost,
-        tier: 0, up: true, restoreStep: 0, dirs: [newDir(windowSteps), newDir(windowSteps)] };
-      w.links.push(link);
-      recomputeRoutes(w);
-      return [{ type: "linkLaid", link: link.id }, { type: "rerouted" }];
-    }
-    case "removeLink": {
-      const l = linkById(w, c.link);
-      if (!l) return reject("unknown-link");
-      // A cut link cannot be removed: removing and re-laying it would cancel the cut for free.
-      if (!l.up) return reject("link-is-cut");
-      const lost = flushDir(l.dirs[0]) + flushDir(l.dirs[1]);
-      const out: StepEvent[] = [{ type: "linkRemoved", link: l.id, a: l.a, b: l.b }];
-      for (let i = 0; i < lost; i++) out.push(...countDrop(w, "cut", l.a, l.id));
-      w.fiberKm += l.km;
-      w.links = w.links.filter(x => x.id !== l.id);
-      recomputeRoutes(w);
-      out.push({ type: "rerouted" });
-      return out;
-    }
-    case "setCost": {
-      const l = linkById(w, c.link);
-      if (!l) return reject("unknown-link");
-      if (!isValidCost(c.cost)) return reject("bad-cost");
-      if (l.cost === c.cost) return [];
-      l.cost = c.cost;
-      recomputeRoutes(w);
-      return [{ type: "costSet", link: l.id, cost: l.cost }, { type: "rerouted" }];
-    }
-    case "upgrade": {
-      const l = linkById(w, c.link);
-      if (!l) return reject("unknown-link");
-      if (w.upgrades <= 0) return reject("no-upgrades");
-      if (l.tier >= w.tuning.tiers.length - 1) return reject("max-tier");
-      w.upgrades--;
-      l.tier++;   // cost is deliberately unchanged (SPEC S6, AC8)
-      return [{ type: "upgraded", link: l.id, tier: l.tier }];
-    }
-    case "chooseReward": {
-      if (!w.pendingReward) return reject("no-reward-pending");
-      if (!w.pendingReward.includes(c.choice)) return reject("bad-choice");
-      if (c.choice === "fiber") w.fiberKm += w.tuning.rewardFiberKm; else w.upgrades++;
-      w.pendingReward = null;
-      return [{ type: "rewardTaken", choice: c.choice }];
-    }
-  }
-}
-
-// ---------- the step ----------
-
-function countDrop(w: World, reason: DropReason, at: number, link?: number): StepEvent[] {
-  w.dropped[reason]++;
-  w.meterMilli += 1000;
-  w.lastDropStep = w.step;
-  return [{ type: "drop", reason, at, link }];
-}
-
-/** Sends a packet onward from router `at`, or delivers it, or drops it. */
-function forward(w: World, p: Packet, at: number, out: StepEvent[]): void {
-  if (at === p.dst) { w.delivered++; out.push({ type: "delivered", at }); return; }
-  const next = pickNextHop(w.routes, w.rotors, at, p.dst);
-  const link = next === undefined ? undefined : linkBetween(w, at, next);
-  if (next === undefined || !link || !link.up) { out.push(...countDrop(w, "noroute", at)); return; }
-  const dir = link.dirs[link.a === at ? 0 : 1];
-  if (!enqueue(dir, p, w.tuning.queueLen)) out.push(...countDrop(w, "queue", at, link.id));
-}
+// --- creation ---------------------------------------------------------------------------
 
 /**
- * Applies the commands, then advances exactly one step, unless the run is over or a reward
- * choice is pending (time stands still until the player chooses, R10).
+ * The seed picks the first site, then each next site from the three nearest to those
+ * already chosen, so the network grows outward and links stay affordable.
  */
-export function step(w: World, commands: readonly Command[] = []): StepEvent[] {
-  const out: StepEvent[] = [];
-  for (const c of commands) out.push(...applyCommand(w, c));
-  if (w.over || w.pendingReward) return out;
-
-  const t = w.tuning, sps = t.stepsPerSec;
-  w.step++;
-  let dirty = false;
-
-  // 1. Scheduled events.
-  for (const s of w.sites) {
-    if (s.appearStep === w.step) { out.push({ type: "siteAppeared", site: s.id }); dirty = true; }
-    if (s.activeStep === w.step) out.push({ type: "siteActive", site: s.id });
+function chooseSites(seed: string, region: Region, count: number): number[] {
+  const rng = seedRng(`${seed}/sites`);
+  const chosen = [nextInt(rng, region.sites.length)];
+  while (chosen.length < count) {
+    const near = region.sites
+      .map((site, index) => ({
+        index,
+        km: Math.min(...chosen.map((c) => Math.hypot(site.x - region.sites[c]!.x, site.y - region.sites[c]!.y))),
+      }))
+      .filter((candidate) => !chosen.includes(candidate.index))
+      .sort((p, q) => p.km - q.km || p.index - q.index);
+    chosen.push(near[nextInt(rng, Math.min(3, near.length))]!.index);
   }
-  for (const l of w.links) {
-    if (!l.up && l.restoreStep === w.step) { l.up = true; l.restoreStep = 0; dirty = true; out.push({ type: "restored", link: l.id }); }
+  return chosen;
+}
+
+export function createWorld(seed: string, region: Region, tuning: Tuning, options: WorldOptions = {}): World {
+  const count = Math.min(tuning.maxSites, region.sites.length);
+  const order = options.inOrder ? Array.from({ length: count }, (_, i) => i) : chooseSites(seed, region, count);
+  const S = tuning.stepsPerSec;
+  const sites: Site[] = order.map((index, i) => {
+    const def = region.sites[index]!;
+    const appearStep = i < tuning.startSites ? 0 : (i - tuning.startSites + 1) * tuning.siteEverySec * S;
+    return {
+      id: i + 1,
+      code: def.code,
+      name: def.name,
+      x: def.x,
+      y: def.y,
+      weight: def.weight,
+      appearStep,
+      activeStep: appearStep + tuning.graceSec * S,
+      credit: 0,
+    };
+  });
+  const world: World = {
+    seed,
+    tuning: JSON.parse(JSON.stringify(tuning)) as Tuning,
+    maxPaths: options.maxPaths ?? 1,
+    step: 0,
+    rngTraffic: seedRng(`${seed}/traffic`),
+    rngEvents: seedRng(`${seed}/events`),
+    sites,
+    links: [],
+    nextLinkId: 1,
+    nextPacketId: 1,
+    routes: {},
+    rotors: {},
+    routesDirty: false,
+    fiberKm: tuning.startFiberKm,
+    upgrades: tuning.startUpgrades,
+    meter: 0,
+    lastDropStep: 0,
+    stepDrops: 0,
+    delivered: 0,
+    dropped: { queue: 0, cut: 0, noRoute: 0 },
+    nextRewardStep: tuning.rewardEverySec * S,
+    rewardPending: false,
+    nextCutStep: tuning.firstCutSec * S,
+    over: false,
+  };
+  recompute(world);
+  return world;
+}
+
+// --- reading the world ------------------------------------------------------------------
+
+/** Sites that have appeared on the map. */
+export function presentSites(world: World): Site[] {
+  return world.sites.filter((site) => site.appearStep <= world.step);
+}
+
+/** Sites whose grace period has ended: they send and receive traffic. */
+export function activeSites(world: World): Site[] {
+  return world.sites.filter((site) => site.activeStep <= world.step);
+}
+
+export function siteById(world: World, id: SiteId): Site | undefined {
+  const site = world.sites[id - 1];
+  return site && site.appearStep <= world.step ? site : undefined;
+}
+
+export function linkById(world: World, id: LinkId): Link | undefined {
+  return world.links.find((link) => link.id === id);
+}
+
+export function findLink(world: World, a: SiteId, b: SiteId): Link | undefined {
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  return world.links.find((link) => link.a === lo && link.b === hi);
+}
+
+/** Packets per second each direction of the link serves. */
+export function capacityOf(world: World, link: Link): number {
+  return world.tuning.tiers[link.tier]!;
+}
+
+/** Steps a packet spends on the link: proportional to its length on the map (S11). */
+export function travelSteps(world: World, link: Link): number {
+  return Math.max(1, Math.round((link.km * world.tuning.stepsPerSec) / world.tuning.kmPerSec));
+}
+
+/** Utilization of one direction, 0 to 1: packets served over capacity, averaged over the window (R5). */
+export function dirUtilization(world: World, link: Link, dir: 0 | 1): number {
+  return utilization(link.dirs[dir], capacityOf(world, link), world.tuning.stepsPerSec);
+}
+
+/** The load state of a link, taken from its busier direction (R5, FR-008). */
+export function loadState(world: World, link: Link): LoadState {
+  if (refusedInWindow(link.dirs[0]) + refusedInWindow(link.dirs[1]) > 0) return "dropping";
+  const percent = Math.max(dirUtilization(world, link, 0), dirUtilization(world, link, 1)) * 100;
+  if (percent >= world.tuning.congestedPct) return "congested";
+  if (percent >= world.tuning.busyPct) return "busy";
+  return "nominal";
+}
+
+/** An active site with no route to any other active site is dark (R8). */
+export function isDark(world: World, id: SiteId): boolean {
+  const active = activeSites(world);
+  if (!active.some((site) => site.id === id)) return false;
+  return !active.some((other) => other.id !== id && world.routes[id]?.[other.id] !== undefined);
+}
+
+/** Packets still in the network: queued or on a wire. */
+export function inFlight(world: World): number {
+  let n = 0;
+  for (const link of world.links) for (const dir of link.dirs) n += dir.queue.length + dir.wire.length;
+  return n;
+}
+
+export function formatTime(steps: number, stepsPerSec: number): string {
+  const seconds = Math.floor(steps / stepsPerSec);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/** Score is the number of packets delivered; time survived is recorded beside it (R12). */
+export function scoreOf(world: World): { score: number; steps: number; time: string } {
+  return { score: world.delivered, steps: world.step, time: formatTime(world.step, world.tuning.stepsPerSec) };
+}
+
+// --- routes, drops, packets -------------------------------------------------------------
+
+function recompute(world: World): void {
+  world.routes = computeRoutes(
+    presentSites(world).map((site) => site.id),
+    world.links.filter((link) => link.up),
+    world.maxPaths,
+  );
+  world.rotors = {};
+  world.routesDirty = false;
+}
+
+function addDrops(world: World, kind: keyof DropCounts, n: number): void {
+  world.dropped[kind] += n;
+  world.stepDrops += n;
+}
+
+/** Empties both directions of a link and returns how many packets were on it. */
+function emptyLink(link: Link): number {
+  let n = 0;
+  for (const dir of link.dirs) {
+    n += dir.queue.length + dir.wire.length;
+    dir.queue = [];
+    dir.wire = [];
   }
-  if (w.step === w.nextCutStep) {
-    const candidates = w.links.filter(l => l.up);
-    if (candidates.length > 0) {
-      const l = candidates[nextInt(w.rng, 0, candidates.length - 1)]!;
-      l.up = false;
-      l.restoreStep = w.step + nextInt(w.rng, t.cutDurationSec[0], t.cutDurationSec[1]) * sps;
-      const lost = flushDir(l.dirs[0]) + flushDir(l.dirs[1]);
-      out.push({ type: "cut", link: l.id, lost });
-      for (let i = 0; i < lost; i++) out.push(...countDrop(w, "cut", l.a, l.id));
-      dirty = true;
+  return n;
+}
+
+/** Handles a packet standing at router `at`: deliver it, queue it for its next hop, or drop it. */
+function forward(world: World, packet: Packet, at: SiteId): "delivered" | "queued" | "dropped" {
+  if (at === packet.dst) {
+    world.delivered += 1;
+    return "delivered";
+  }
+  const hop = pickNextHop(world.routes, world.rotors, at, packet.dst);
+  const link = hop === null ? undefined : findLink(world, at, hop);
+  if (!link || !link.up) {
+    addDrops(world, "noRoute", 1);
+    return "dropped";
+  }
+  const dir: Direction = at === link.a ? link.dirs[0] : link.dirs[1];
+  if (!offer(dir, packet, world.tuning.queueLen, world.step)) {
+    addDrops(world, "queue", 1);
+    return "dropped";
+  }
+  return "queued";
+}
+
+/** Creates a packet at its source and routes it there. Used by emission, and by tests. */
+export function injectPacket(world: World, src: SiteId, dst: SiteId): void {
+  if (world.routesDirty) recompute(world); // R1: routes are current before a packet is forwarded
+  const packet: Packet = { id: world.nextPacketId++, src, dst, born: world.step, t0: world.step, t1: world.step };
+  forward(world, packet, src);
+}
+
+/** Cuts a link for `durationSteps`. Everything on it is lost (S10). Used by the schedule, and by tests. */
+export function cutLink(world: World, id: LinkId, durationSteps: number): void {
+  const link = linkById(world, id);
+  if (!link || !link.up) return;
+  link.up = false;
+  link.restoreStep = world.step + durationSteps;
+  addDrops(world, "cut", emptyLink(link));
+  world.routesDirty = true;
+}
+
+// --- commands ---------------------------------------------------------------------------
+
+/** Fiber a link between two sites takes, in whole km. The one rule for the budget, the bot and the screen. */
+export function linkLength(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.max(1, Math.round(Math.hypot(a.x - b.x, a.y - b.y)));
+}
+
+/** Says whether a command would be accepted, without changing the world. */
+export function validate(world: World, command: Command): Reason | null {
+  if (world.over) return "run-over";
+  switch (command.type) {
+    case "layLink": {
+      const a = siteById(world, command.a);
+      const b = siteById(world, command.b);
+      if (!a || !b) return "no-such-site";
+      if (a.id === b.id) return "same-site";
+      if (findLink(world, a.id, b.id)) return "duplicate-link";
+      if (linkLength(a, b) > world.fiberKm) return "not-enough-fiber";
+      return null;
     }
-    w.nextCutStep = w.step + nextInt(w.rng, t.cutGapSec[0], t.cutGapSec[1]) * sps;
+    case "removeLink": {
+      const link = linkById(world, command.link);
+      if (!link) return "no-such-link";
+      if (!link.up) return "link-is-cut";
+      return null;
+    }
+    case "setCost": {
+      if (!linkById(world, command.link)) return "no-such-link";
+      const ok = Number.isInteger(command.cost) && command.cost >= MIN_COST && command.cost <= MAX_COST;
+      return ok ? null : "bad-cost";
+    }
+    case "upgrade": {
+      const link = linkById(world, command.link);
+      if (!link) return "no-such-link";
+      if (link.tier >= world.tuning.tiers.length - 1) return "max-tier";
+      if (world.upgrades < 1) return "no-upgrade";
+      return null;
+    }
+    case "chooseReward": {
+      if (!world.rewardPending) return "no-reward-pending";
+      if (command.choice !== "fiber" && command.choice !== "upgrade") return "bad-choice";
+      return null;
+    }
+  }
+}
+
+function apply(world: World, command: Command): void {
+  switch (command.type) {
+    case "layLink": {
+      const a = siteById(world, Math.min(command.a, command.b))!;
+      const b = siteById(world, Math.max(command.a, command.b))!;
+      const km = linkLength(a, b);
+      const windowSteps = world.tuning.utilWindowSec * world.tuning.stepsPerSec;
+      world.links.push({
+        id: world.nextLinkId++,
+        a: a.id,
+        b: b.id,
+        km,
+        cost: DEFAULT_LINK_COST,
+        tier: 0,
+        up: true,
+        restoreStep: 0,
+        dirs: [newDirection(windowSteps), newDirection(windowSteps)],
+      });
+      world.fiberKm -= km;
+      world.routesDirty = true;
+      return;
+    }
+    case "removeLink": {
+      const link = linkById(world, command.link)!;
+      addDrops(world, "cut", emptyLink(link));
+      world.fiberKm += link.km; // returned in full; the upgrades spent on the link are forfeited (Q5)
+      world.links = world.links.filter((other) => other.id !== link.id);
+      world.routesDirty = true;
+      return;
+    }
+    case "setCost": {
+      const link = linkById(world, command.link)!;
+      if (link.cost !== command.cost) {
+        link.cost = command.cost;
+        world.routesDirty = true;
+      }
+      return;
+    }
+    case "upgrade": {
+      linkById(world, command.link)!.tier += 1;
+      world.upgrades -= 1;
+      return;
+    }
+    case "chooseReward": {
+      if (command.choice === "fiber") world.fiberKm += world.tuning.rewardFiberKm;
+      else world.upgrades += 1;
+      world.rewardPending = false;
+      return;
+    }
+  }
+}
+
+/** Applies a command if the rules accept it, and says why when they do not. Does not advance time. */
+export function applyCommand(world: World, command: Command): Reason | null {
+  const reason = validate(world, command);
+  if (!reason) apply(world, command);
+  return reason;
+}
+
+// --- the step ---------------------------------------------------------------------------
+
+function pickDestination(world: World, from: Site, active: Site[]): SiteId {
+  let total = 0;
+  for (const site of active) if (site.id !== from.id) total += site.weight;
+  let pick = nextInt(world.rngTraffic, total);
+  for (const site of active) {
+    if (site.id === from.id) continue;
+    if (pick < site.weight) return site.id;
+    pick -= site.weight;
+  }
+  throw new Error("no destination"); // unreachable: total covers every other active site
+}
+
+/** Advances the world by at most one step. See contracts/simulation.md for the order of work. */
+export function step(world: World, commands: Command[]): StepEvents {
+  const events: StepEvents = {
+    advanced: false,
+    rejected: [],
+    delivered: 0,
+    dropped: { queue: 0, cut: 0, noRoute: 0 },
+    siteAppeared: [],
+    siteActivated: [],
+    linkCut: null,
+    linkRestored: null,
+    routesChanged: false,
+    rewardOffered: false,
+    over: world.over,
+  };
+  const deliveredBefore = world.delivered;
+  const droppedBefore = { ...world.dropped };
+  const finish = (): StepEvents => {
+    events.delivered = world.delivered - deliveredBefore;
+    events.dropped = {
+      queue: world.dropped.queue - droppedBefore.queue,
+      cut: world.dropped.cut - droppedBefore.cut,
+      noRoute: world.dropped.noRoute - droppedBefore.noRoute,
+    };
+    events.over = world.over;
+    return events;
+  };
+
+  // 1–2. Commands, in the order given.
+  for (const command of commands) {
+    const reason = applyCommand(world, command);
+    if (reason) events.rejected.push({ command, reason });
+  }
+  // 1, 3. Time stands still once the run is over and while a reward is pending.
+  if (world.over || world.rewardPending) return finish();
+
+  // 4.
+  world.step += 1;
+  events.advanced = true;
+  const S = world.tuning.stepsPerSec;
+
+  // 5. Timed events.
+  for (const site of world.sites) {
+    if (site.appearStep === world.step) {
+      events.siteAppeared.push(site.id);
+      world.routesDirty = true;
+    }
+    if (site.activeStep === world.step) events.siteActivated.push(site.id);
+  }
+  for (const link of world.links) {
+    if (!link.up && link.restoreStep === world.step) {
+      link.up = true;
+      link.restoreStep = 0;
+      world.routesDirty = true;
+      events.linkRestored = link.id;
+    }
+  }
+  if (world.step === world.nextCutStep) {
+    // The same three draws happen whether or not a link is up, so the schedule of later
+    // cuts does not depend on what the player has built.
+    const pick = nextU32(world.rngEvents);
+    const length = nextRange(world.rngEvents, world.tuning.cutLenSec[0] * S, world.tuning.cutLenSec[1] * S);
+    const gap = nextRange(world.rngEvents, world.tuning.cutEverySec[0] * S, world.tuning.cutEverySec[1] * S);
+    const up = world.links.filter((link) => link.up);
+    if (up.length > 0) {
+      const target = up[Math.floor((pick / 4294967296) * up.length)]!;
+      cutLink(world, target.id, length);
+      events.linkCut = target.id;
+    }
+    world.nextCutStep = world.step + gap;
   }
 
-  // 2. Routes are recomputed before any packet is forwarded in this step (R1).
-  if (dirty) { recomputeRoutes(w); out.push({ type: "rerouted" }); }
-
-  // 3. Links: packets in flight move on; queued packets go on the wire.
-  const arrivals: { p: Packet; at: number }[] = [];
-  for (const l of w.links) {
-    if (!l.up) continue;
-    const flight = Math.max(2, Math.round(l.km / t.kmPerSec * sps));
-    const cap = capacityOf(w, l);
-    for (const p of advanceDir(l.dirs[0], w.step, cap, sps, flight)) arrivals.push({ p, at: l.b });
-    for (const p of advanceDir(l.dirs[1], w.step, cap, sps, flight)) arrivals.push({ p, at: l.a });
+  // 6. Routes are current before any packet is forwarded in this step (R1).
+  if (world.routesDirty) {
+    recompute(world);
+    events.routesChanged = true;
   }
 
-  // 4. Routers forward what arrived, each from its own table (F5).
-  for (const { p, at } of arrivals) forward(w, p, at, out);
+  // 7. Service comes before arrivals, so a packet is never served in the step it joins a queue.
+  for (const link of world.links) {
+    for (const dir of link.dirs) {
+      beginStep(dir, world.step);
+      if (link.up) serve(dir, capacityOf(world, link), S, world.step, travelSteps(world, link));
+    }
+  }
 
-  // 5. Active sites emit new packets (R3).
-  const active = w.sites.filter(s => isActive(w, s));
-  if (active.length > 1) {
-    const rateMilli = t.baseRateMilli + Math.floor(t.rateGrowthMilliPerMin * w.step / (60 * sps));
-    for (const s of active) {
-      s.acc += rateMilli * s.weight;
-      while (s.acc >= 1000 * sps) {
-        s.acc -= 1000 * sps;
-        const others = active.filter(o => o.id !== s.id);
-        let pick = nextFloat(w.rng) * others.reduce((sum, o) => sum + o.weight, 0);
-        let dst = others[others.length - 1]!;
-        for (const o of others) { pick -= o.weight; if (pick < 0) { dst = o; break; } }
-        forward(w, { id: w.nextPacketId++, src: s.id, dst: dst.id, remain: 0, total: 0 }, s.id, out);
+  // 8. Arrivals at the far router.
+  for (const link of world.links) {
+    for (let d = 0; d < 2; d++) {
+      const dir = link.dirs[d]!;
+      const far = d === 0 ? link.b : link.a;
+      while (dir.wire.length > 0 && dir.wire[0]!.t1 <= world.step) forward(world, dir.wire.shift()!, far);
+    }
+  }
+
+  // 9. Emission. It does not depend on the network, only on the seed and the clock (R3).
+  const active = activeSites(world);
+  if (active.length >= 2) {
+    const perWeight = world.tuning.baseRateMilli + Math.floor((world.tuning.rateGrowthMilliPerMin * world.step) / (60 * S));
+    const onePacket = 1000 * S;
+    for (const site of active) {
+      site.credit += site.weight * perWeight;
+      while (site.credit >= onePacket) {
+        site.credit -= onePacket;
+        injectPacket(world, site.id, pickDestination(world, site, active));
       }
     }
   }
 
-  // 6. Drop meter (R7) and rewards (R10).
-  if (w.meterMilli > 0 && w.step - w.lastDropStep > t.drainDelaySec * sps)
-    w.meterMilli = Math.max(0, w.meterMilli - Math.round(1000 * t.drainPerSec / sps));
-  if (w.meterMilli >= t.meterMax * 1000) { w.over = true; out.push({ type: "over" }); return out; }
-  if (w.step === w.nextRewardStep) {
-    w.pendingReward = ["fiber", "upgrade"];
-    w.nextRewardStep += t.rewardEverySec * sps;
-    out.push({ type: "rewardOffered" });
+  // 11. The drop meter (R7, FR-010).
+  if (world.stepDrops > 0) {
+    world.meter = Math.min(world.tuning.meterSize, world.meter + world.stepDrops);
+    world.lastDropStep = world.step;
+    world.stepDrops = 0;
+  } else if (world.meter > 0) {
+    const since = world.step - world.lastDropStep;
+    const delay = world.tuning.meterDrainDelaySec * S;
+    if (since >= delay && (since - delay) % (world.tuning.meterDrainIntervalSec * S) === 0) world.meter -= 1;
   }
-  return out;
+  if (world.meter >= world.tuning.meterSize) world.over = true;
+
+  // 12. Rewards (R10).
+  if (!world.over && world.step === world.nextRewardStep) {
+    world.rewardPending = true;
+    world.nextRewardStep += world.tuning.rewardEverySec * S;
+    events.rewardOffered = true;
+  }
+  return finish();
 }
 
-// ---------- determinism support ----------
+// --- copying and hashing ----------------------------------------------------------------
 
-/** FNV-1a hash of everything that affects the future of the run. */
-export function hashWorld(w: World): string {
-  const parts: (number | string)[] = [w.step, w.rng.s, w.fiberKm, w.upgrades, w.delivered, w.dropped.queue, w.dropped.cut,
-    w.dropped.noroute, w.meterMilli, w.lastDropStep, w.nextRewardStep, w.pendingReward ? 1 : 0, w.nextCutStep, w.over ? 1 : 0, w.nextPacketId];
-  for (const s of w.sites) parts.push(s.id, s.acc);
-  for (const l of w.links) {
-    parts.push(l.id, l.a, l.b, l.cost, l.tier, l.up ? 1 : 0, l.restoreStep);
-    for (const d of l.dirs) {
-      parts.push(d.credit, d.histSum, d.queue.length, d.flight.length);
-      for (const p of d.queue) parts.push(p.id, p.dst);
-      for (const p of d.flight) parts.push(p.id, p.dst, p.remain);
+export function cloneWorld(world: World): World {
+  return JSON.parse(JSON.stringify(world)) as World;
+}
+
+/** A fingerprint of the whole world. Equal worlds give equal text (R13). */
+export function hashWorld(world: World): string {
+  let h1 = 0x811c9dc5 | 0;
+  let h2 = 0x9e3779b9 | 0;
+  const num = (n: number): void => {
+    const low = n | 0;
+    const high = Math.floor(n / 4294967296) | 0;
+    h1 = Math.imul(h1 ^ low, 0x01000193) ^ high;
+    h2 = Math.imul(h2 ^ (low + high), 0x85ebca6b);
+    h2 ^= h2 >>> 13;
+  };
+  const text = (s: string): void => {
+    num(s.length);
+    for (let i = 0; i < s.length; i++) num(s.charCodeAt(i));
+  };
+  const flag = (b: boolean): void => num(b ? 1 : 0);
+  const packets = (list: Packet[]): void => {
+    num(list.length);
+    for (const p of list) {
+      num(p.id);
+      num(p.src);
+      num(p.dst);
+      num(p.born);
+      num(p.t0);
+      num(p.t1);
+    }
+  };
+  const numbers = (list: number[]): void => {
+    num(list.length);
+    for (const n of list) num(n);
+  };
+
+  text(world.seed);
+  text(JSON.stringify(world.tuning));
+  num(world.maxPaths);
+  num(world.step);
+  for (const rng of [world.rngTraffic, world.rngEvents]) numbers([rng.a, rng.b, rng.c, rng.d]);
+  num(world.sites.length);
+  for (const s of world.sites) {
+    text(s.code);
+    numbers([s.id, s.x, s.y, s.weight, s.appearStep, s.activeStep, s.credit]);
+  }
+  num(world.links.length);
+  for (const l of world.links) {
+    numbers([l.id, l.a, l.b, l.km, l.cost, l.tier, l.restoreStep]);
+    flag(l.up);
+    for (const dir of l.dirs) {
+      num(dir.credit);
+      packets(dir.queue);
+      packets(dir.wire);
+      numbers(dir.served);
+      numbers(dir.refused);
     }
   }
-  for (const k of Object.keys(w.rotors).sort()) parts.push(k, w.rotors[k]!);
-  const text = parts.join(",");
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0).toString(16).padStart(8, "0");
+  const keys = (table: Record<number, unknown>): number[] => Object.keys(table).map(Number).sort((x, y) => x - y);
+  for (const router of keys(world.routes)) {
+    num(router);
+    for (const dst of keys(world.routes[router]!)) {
+      const route = world.routes[router]![dst]!;
+      num(dst);
+      num(route.cost);
+      numbers(route.nextHops);
+    }
+  }
+  for (const router of keys(world.rotors)) {
+    num(router);
+    for (const dst of keys(world.rotors[router]!)) numbers([dst, world.rotors[router]![dst]!]);
+  }
+  numbers([world.nextLinkId, world.nextPacketId, world.fiberKm, world.upgrades, world.meter, world.lastDropStep]);
+  numbers([world.stepDrops, world.delivered, world.dropped.queue, world.dropped.cut, world.dropped.noRoute]);
+  numbers([world.nextRewardStep, world.nextCutStep]);
+  flag(world.routesDirty);
+  flag(world.rewardPending);
+  flag(world.over);
+  const hex = (n: number): string => (n >>> 0).toString(16).padStart(8, "0");
+  return hex(h1) + hex(h2);
 }
-
-export const cloneWorld = (w: World): World => structuredClone(w);

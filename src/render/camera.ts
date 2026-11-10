@@ -1,83 +1,147 @@
-// One camera owns tilt, zoom and pan, and converts both ways between map and screen coordinates,
-// so drawing and hit-testing can never disagree on the tilted map.
+// One camera owns tilt, zoom and pan, and converts both ways between the map (kilometres,
+// north up) and the screen (CSS pixels), so that hit-testing stays right on the tilted map.
 
-import type { Region } from "../sim/world";
-
-export const MAP_W = 1600;
-export const MAP_H = 900;
-
-const LAT0 = 36.7, LON0 = -96.7, PX_PER_DEG = 31.8, COS_LAT0 = Math.cos(38 * Math.PI / 180);
-
-/** Longitude/latitude to map units (equirectangular, squeezed for mid-latitude). */
-export function project(lon: number, lat: number): [number, number] {
-  return [MAP_W / 2 + (lon - LON0) * COS_LAT0 * PX_PER_DEG, MAP_H / 2 - (lat - LAT0) * PX_PER_DEG];
+export interface ScreenPoint {
+  x: number;
+  y: number;
+  /** Local scale: how much nearer or farther this point is drawn than the map's centre. */
+  s: number;
 }
 
-export interface Camera {
-  /** Viewport in CSS pixels. */
-  w: number; h: number;
-  /** Screen pixels per map unit at the focus point. */
-  zoom: number;
-  /** Map point shown at the focus point. */
-  cx: number; cy: number;
-  /** Focus point on screen. */
-  ox: number; oy: number;
-  /** Tilt about the horizontal axis, radians. The top of the map recedes. */
-  tilt: number;
-  /** Eye distance in pixels; smaller is a stronger perspective. */
-  dist: number;
-  minZoom: number; maxZoom: number;
-}
+/** Sites and links can be picked within this many CSS pixels: a 44-pixel target. */
+export const HIT_RADIUS = 22;
 
-export interface ScreenPoint { x: number; y: number; /** Perspective scale at this point; 1 at the focus. */ s: number }
+export class Camera {
+  width = 1;
+  height = 1;
+  /** Map point at the centre of the view, in km. */
+  cx = 0;
+  cy = 0;
+  /** CSS pixels per km at the centre. */
+  zoom = 0.2;
+  /** Tilt of the map plane, in radians. The top of the map leans away from the viewer. */
+  tilt = (32 * Math.PI) / 180;
+  minZoom = 0.02;
+  maxZoom = 4;
+  /** The box of map points the view was last fitted to. Panning keeps the centre inside it. */
+  private box: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
 
-export function toScreen(c: Camera, mx: number, my: number): ScreenPoint {
-  const X = (mx - c.cx) * c.zoom, Y = (my - c.cy) * c.zoom;
-  const s = c.dist / (c.dist - Y * Math.sin(c.tilt));
-  return { x: c.ox + X * s, y: c.oy + Y * Math.cos(c.tilt) * s, s };
-}
-
-export function toMap(c: Camera, sx: number, sy: number): [number, number] {
-  const u = sx - c.ox, v = sy - c.oy;
-  const Y = v * c.dist / (c.dist * Math.cos(c.tilt) + v * Math.sin(c.tilt));
-  const s = c.dist / (c.dist - Y * Math.sin(c.tilt));
-  return [c.cx + u / s / c.zoom, c.cy + Y / c.zoom];
-}
-
-export interface Insets { top: number; right: number; bottom: number; left: number }
-
-/** Frames every site of the region inside the viewport minus the HUD insets. */
-export function fitCamera(w: number, h: number, region: Region, insets: Insets): Camera {
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  for (const s of region.sites) {
-    const [x, y] = project(s.lon, s.lat);
-    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  private get distance(): number {
+    return this.height * 2.4;
   }
-  const pad = 70;
-  const availW = Math.max(120, w - insets.left - insets.right), availH = Math.max(120, h - insets.top - insets.bottom);
-  const tilt = 17 * Math.PI / 180;
-  const zoom = Math.min(availW / (x1 - x0 + pad * 2), availH / ((y1 - y0 + pad * 2) * Math.cos(tilt)));
-  return { w, h, zoom, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, ox: insets.left + availW / 2, oy: insets.top + availH / 2,
-    tilt, dist: Math.max(w, h) * 1.25, minZoom: zoom * 0.6, maxZoom: zoom * 5 };
+
+  /**
+   * The tilted map plane meets the eye at a finite distance south of the view's centre, and
+   * its horizon at a finite distance north. Past either, the perspective division gives an
+   * infinite or negative scale. A point is held this share of the way there instead, which
+   * is always far off the bottom of the view. A held point is not where the map point truly
+   * is, so a line that crosses the limit must be cut at `southLimit` before it is drawn, or
+   * the part of it in view would point the wrong way.
+   */
+  private static readonly LIMIT = 0.75;
+
+  /** How far south of the view's centre, in pixels on the map plane, the limit lies. */
+  private get nearest(): number {
+    return (Camera.LIMIT * this.distance) / Math.sin(this.tilt);
+  }
+
+  /** The southernmost map y, in km, that `toScreen` draws where it truly is, for a layer at `depth`. */
+  southLimit(depth = 1): number {
+    return this.cy * depth - this.nearest / this.zoom;
+  }
+
+  resize(width: number, height: number): void {
+    this.width = Math.max(1, width);
+    this.height = Math.max(1, height);
+  }
+
+  /**
+   * Centres and zooms so that the box of map points fits in the part of the view that the
+   * bars at the top and bottom leave free.
+   */
+  fit(minX: number, minY: number, maxX: number, maxY: number, top = 0, bottom = 0, margin = 0.84): void {
+    this.box = null;
+    this.cx = (minX + maxX) / 2;
+    this.cy = (minY + maxY) / 2;
+    const spanX = Math.max(1, maxX - minX);
+    const spanY = Math.max(1, maxY - minY);
+    const free = Math.max(1, this.height - top - bottom);
+    this.zoom = Math.min((this.width * margin) / spanX, (free * margin) / (spanY * Math.cos(this.tilt)));
+    this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom));
+    // Put the middle of the box in the middle of the free part, not of the whole view.
+    this.pin({ x: this.cx, y: this.cy }, this.width / 2, top + free / 2);
+    this.box = { minX, minY, maxX, maxY };
+  }
+
+  /**
+   * Keeps the centre of the view inside the fitted box, so the map cannot be dragged out of
+   * sight: with the centre among the sites, zooming out always brings them back into view.
+   */
+  private keepInBox(): void {
+    if (!this.box) return;
+    this.cx = Math.min(this.box.maxX, Math.max(this.box.minX, this.cx));
+    this.cy = Math.min(this.box.maxY, Math.max(this.box.minY, this.cy));
+  }
+
+  /** Map km to screen pixels. `depth` shifts a layer for parallax: 1 moves with the map. */
+  toScreen(x: number, y: number, depth = 1): ScreenPoint {
+    const u = (x - this.cx * depth) * this.zoom;
+    const v = Math.min(-(y - this.cy * depth) * this.zoom, this.nearest);
+    const scale = this.distance / (this.distance - v * Math.sin(this.tilt));
+    return {
+      x: this.width / 2 + u * scale,
+      y: this.height / 2 + v * Math.cos(this.tilt) * scale,
+      s: scale,
+    };
+  }
+
+  /** Screen pixels back to map km. The exact inverse of toScreen at depth 1. */
+  toMap(sx: number, sy: number): { x: number; y: number } {
+    const p = sx - this.width / 2;
+    const d = this.distance;
+    // A pointer dragged far above the view would reach the horizon, where the division fails.
+    const horizon = (-d * Math.cos(this.tilt)) / Math.sin(this.tilt);
+    const q = Math.max(sy - this.height / 2, Camera.LIMIT * horizon);
+    const v = (q * d) / (d * Math.cos(this.tilt) + q * Math.sin(this.tilt));
+    const scale = d / (d - v * Math.sin(this.tilt));
+    return { x: this.cx + p / scale / this.zoom, y: this.cy - v / this.zoom };
+  }
+
+  /** Moves the view by (dx, dy) screen pixels, measured at the centre. For keys. */
+  panBy(dx: number, dy: number): void {
+    this.cx -= dx / this.zoom;
+    this.cy += dy / (this.zoom * Math.cos(this.tilt));
+    this.keepInBox();
+  }
+
+  /**
+   * Moves the view so that a map point sits under a screen point. A drag grabs the map
+   * point under the pointer and keeps it there, which stays exact on the tilted map, up to
+   * the edge of the fitted box.
+   */
+  pin(map: { x: number; y: number }, sx: number, sy: number): void {
+    const under = this.toMap(sx, sy);
+    this.cx += map.x - under.x;
+    this.cy += map.y - under.y;
+    this.keepInBox();
+  }
+
+  /** Zooms by `factor`, keeping the map point under (sx, sy) where it is. */
+  zoomAt(factor: number, sx: number, sy: number): void {
+    const before = this.toMap(sx, sy);
+    this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom * factor));
+    const after = this.toMap(sx, sy);
+    this.cx += before.x - after.x;
+    this.cy += before.y - after.y;
+    this.keepInBox();
+  }
 }
 
-/** Zooms about a screen point, keeping the map point under it fixed. */
-export function zoomAt(c: Camera, sx: number, sy: number, factor: number): void {
-  const [mx, my] = toMap(c, sx, sy);
-  c.zoom = Math.min(c.maxZoom, Math.max(c.minZoom, c.zoom * factor));
-  const [nx, ny] = toMap(c, sx, sy);
-  c.cx += mx - nx; c.cy += my - ny;
-  clampPan(c);
-}
-
-/** Pans so the map point that was under (fromX, fromY) is now under (toX, toY). */
-export function panBy(c: Camera, fromX: number, fromY: number, toX: number, toY: number): void {
-  const [ax, ay] = toMap(c, fromX, fromY), [bx, by] = toMap(c, toX, toY);
-  c.cx += ax - bx; c.cy += ay - by;
-  clampPan(c);
-}
-
-function clampPan(c: Camera): void {
-  c.cx = Math.min(MAP_W + 200, Math.max(-200, c.cx));
-  c.cy = Math.min(MAP_H + 200, Math.max(-200, c.cy));
+/** Distance in pixels from point p to the segment a–b. */
+export function distanceToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const length2 = dx * dx + dy * dy;
+  const t = length2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }

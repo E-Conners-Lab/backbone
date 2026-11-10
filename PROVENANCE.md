@@ -144,3 +144,139 @@ Downloaded as plain text from `https://www.rfc-editor.org/rfc/rfcNNNN.txt` with 
 | Removed "mute control" from v1 | The owner accepted sound in v1.1; recorded as a spec amendment |
 | A cut link cannot be removed | Closes an exploit found in review; recorded as a spec amendment |
 | Balance constants changed from the plan's starting values | The plan called them tunable; final values are in the plan |
+
+---
+
+# Spec Kit rebuild
+
+Everything above this line records the hand-built v1 (tag `v1-handbuilt`) and is left as written.
+From here down the file records the rebuild of v1 through Spec Kit on branch `speckit-rebuild`.
+The same rules apply: only what happened, `unknown` where something was not recorded, and no
+estimated tokens or costs. Times are UTC.
+
+## Recorded late
+
+This file was not updated between 2026-11-10T01:06Z and the start of this part. What happened in
+that gap is in `docs/capture-log.md`. The rows below point to it. The session that wrote this part
+did not witness any of it.
+
+| What | Where it is recorded |
+| --- | --- |
+| Showcase player and recorder, the visible run, a code review at level `high` | Capture log steps 29–35 |
+| Owner's decisions: consent to publish, the name Backbone, three secure-build exceptions, creator name | Capture log step 33 and its questions table; `docs/PID.md` amendment 1.2 |
+| Decision to rebuild through Spec Kit, tag `v1-handbuilt`, the clean slate, `specify init` | Capture log steps 38–42; `docs/PID.md` amendment 1.3; commits `bde1e7e` and `e116913` |
+
+## Rebuild environment
+
+| Item | Value | How it was established |
+| --- | --- | --- |
+| Model | `claude-fable-5-2` | Model ID reported to the agent by the harness in this session |
+| Reasoning effort | `xhigh` | The owner's `/effort` command at the start of the session |
+| Harness | Claude Code 2.1.322 | `claude --version`, 2026-11-10T04:14Z |
+| GitHub Spec Kit | 1.2.2, Claude integration, commands installed as skills | `.specify/init-options.json` |
+| OS | macOS, Darwin 25.6.0, arm64 | Session environment |
+| Python | 3.15.0 | `python3 --version`; runs `tools/build_runbook.py` and the constitution check |
+| Session start | unknown | The first timestamp captured was 2026-11-10T04:14Z |
+| Sessions | One. It waited for the owner from about 04:25Z to about 15:05Z on 2026-11-10. | Timestamps in the capture log |
+| Wall time | unknown | Start not recorded; the session includes the wait above |
+| Token usage / cost | unknown | Not measured by the agent |
+| Helper models and sub-agents | The `code-review` skill ran three reviews, each in a forked session of the same model, `claude-fable-5-2`: 236,865 tokens and 26 tool calls; 178,165 and 36; 181,368 and 22, as reported by the harness. No other model and no other sub-agent. | The forks' own transcripts name the model; steps R19, R24 and R26 |
+| MCP servers | The same servers as listed for v1 are connected. None has been called. | Tool names visible to the agent |
+
+## Human prompts in the rebuild
+
+Counted from the session. The owner's `/model` and `/effort` commands at the start are settings,
+not prompts, and are not counted.
+
+| # | When | Prompt |
+| --- | --- | --- |
+| 1 | 2026-11-10, before 04:14Z | `/speckit-constitution` with the lab's step 1 text |
+| 2 | 2026-11-10, about 04:15Z | Asked whether the project could be finished unattended overnight |
+| 3 | 2026-11-10, about 15:05Z | "go, commit as you go, take your recommendations" |
+| 4 | 2026-11-10, about 18:28Z | Keep going; stop reviewing for its own sake if the findings are not important; make sure the documentation is in the state John's repo asks for, so the game can be sent to his Arcade |
+| 5 | 2026-11-10, between 19:00Z and 19:25Z | Show me the hero card and open the location of the videos |
+| 6 | 2026-11-10, about 19:25Z | "go ahead and push, and I consent" |
+| 7 | 2026-11-10, about 19:26Z | "give me a better hero image" |
+| 8 | 2026-11-10, about 22:42Z | "merge the pull request" |
+
+## Sources read in the rebuild
+
+| Source | How it was obtained | Identifier |
+| --- | --- | --- |
+| `StarterKit/CONSTITUTION.md`, `SPEC.md`, `PLAN.md` | Read in full from this repository | Commit `5fd0490` |
+| Spec Kit templates in `.specify/templates/` (constitution, spec, plan, tasks) | Read in full | Spec Kit 1.2.2 |
+| `docs/PID.md`, `docs/capture-log.md`, this file | Read in full | Commit `5fd0490` |
+| Workshop lab guide, `WORKSHOP/LAB/README.md` in `automateyournetwork/NAF_AC6` | `curl` from raw.githubusercontent.com at commit `b77da71d7c810dbdd678ff09856d9097c7da05ee`, into the session scratch folder | SHA-256 `44d7093e93b27203a46860b008d399bdbf73cd9b5813fe79bc037e9af734a810` |
+| ↳ `WORKSHOP/LAB/StarterKit/README.md` (the README shape) | Same | SHA-256 `8a08d1ac4a97e090dc23efe097d8135b14b6abfabbfb9d29d16629c4b07c9a98` |
+| Tag `v1-handbuilt` (the hand-built source) | Three lookups with `git ls-tree` and `git grep`: where the tuning constants lived, the hue bands in the palette test, and the name of the purity test. **No file was copied.** | Tag `v1-handbuilt` |
+| The approved visual mock, `mock/desktop-1920x1080.png` | Viewed, to compare the look; its stylesheet read for the palette and the base type size | Commit `5fd0490` |
+| Natural Earth v5.1.2 (`nvkelso/natural-earth-vector`): populated places 1:10m, land 1:50m, lakes 1:50m | `tools/build-map.mjs`, from raw.githubusercontent.com into a cache folder that is not committed | Hashes in step R12 |
+| RFC 2328 and RFC 2991 | `curl` from rfc-editor.org into the session scratch folder, for the text review | Same SHA-256 as recorded above for v1 |
+| The owner's saved lab note on FRR in Docker on this machine | The agent's memory folder for this project | Used for the image name and the health gate |
+| `README.md`, `ARCADE.md`, `docs/spec-map.html` and `docs/secure-build-checklist.md` as they described the hand-built v1 | Read before rewriting them | Commit `5fd0490` |
+| The Arcade's `ARCADE.md` template: `WORKSHOP/LAB/StarterKit/ARCADE.md` in `automateyournetwork/NAF_AC6` at commit `b77da71` (still the repo's latest on 2026-11-10), and the copy the Arcade page tells builders to fetch, `automateyournetwork.com/arcade/ARCADE.md` | `curl` with a generic client name, into the session scratch folder | Both SHA-256 `214391d381689c37277f310f12e57e19de58b2def6bc8c22751ffd414fe17eed`: the same file |
+| The finished example the lab guide points to, `WORKSHOP/LAB/Examples/PerHopWorks/ARCADE.md` | Same | SHA-256 `f4e9b90c2a37e9eec2af4f56d92f3884c2a43ba86d05cda3cced5b7ac860031d` |
+| The Arcade page, `automateyournetwork.com/arcade/`: how a game gets listed and the prompt it gives builders | `curl`, read as text, 2026-11-10 | Not hashed; a live page |
+| The game repository's own visibility, default branch and licence on GitHub | `gh repo view E-Conners-Lab/backbone` | Public, default branch `main`, Apache-2.0 |
+
+## Rebuild steps and checks
+
+| # | When (UTC) | Step | Result |
+| --- | --- | --- | --- |
+| R1 | 2026-11-10T04:18Z | Lab step 1: `/speckit-constitution` with the lab's prompt | `.specify/memory/constitution.md` version 1.0.0. Seven principles and their evidence carried over. Five conflicts flagged for the owner (K1–K5), five Spec Kit defaults held to the stricter reading, six points carried to later steps. |
+| R2 | 2026-11-10T04:18Z | Independent carry-over check: a script compares every line and table cell of the source with the new file | Pass, 50 of 50. A copy with two clauses deleted fails, as it should. |
+| R3 | 2026-11-10T15:09Z | Commit lab step 1 | `431cba3`. Not pushed. |
+| R4 | 2026-11-10T15:11Z | Amend the constitution with the owner's decisions K1 and K2 | Version 1.1.0. Carry-over check passes with the two changes declared. |
+| R5 | 2026-11-10T15:19Z | Lab step 2: `/speckit-specify` with the lab's prompt plus one sentence naming K1, K3, L1, L2 | `specs/001-backbone-first-playable/spec.md` and its requirements checklist. AC1–AC23 kept; AC24–AC25 added. |
+| R6 | 2026-11-10T15:19Z | Independent preservation check of the spec against `StarterKit/SPEC.md` | First run: fail, three criteria had lost words in rewording. Fixed. Second run: pass, 246 pieces. |
+| R7 | 2026-11-10T15:22Z | Lab step 3: `/speckit-clarify`. Five questions asked and answered by the build agent itself, because the owner was away | Five clarifications recorded in the spec, each marked as the agent's answer. One (reward offers) departs from the wording of the owner's decision Q2 and is flagged as K6. AC26 added. |
+| R8 | 2026-11-10T15:30Z | Lab step 4: `/speckit-plan` with the lab's prompt. Tool versions read with `node --version`, `npm --version`, `docker version`, `npm view` | Plan and design files written. No research agents were used. Ten contradictions resolved in the plan (P1–P10). |
+| R9 | 2026-11-10T15:33Z | Lab step 5: `/speckit-tasks` with the lab's prompt | `tasks.md`, 69 tasks. Format and coverage checked by script: sequential IDs, story labels only in story phases, every AC named. |
+| R10 | 2026-11-10T15:39Z | Lab step 6: `/speckit-analyze`, two passes, with fixes to the spec, plan and tasks between them | Pass 1: 15 findings (1 critical, 2 high). Pass 2: none critical or high; full coverage by ID. Report in `docs/verification/analysis.md`. |
+| R11 | 2026-11-10T15:57Z | Lab step 7 begins: `/speckit-implement` with the lab's prompt. Skill `secure-build-standard` loaded. `npm install` of exact versions; `npm audit`; `npx playwright install chromium` | 45 packages, 0 vulnerabilities. |
+| R12 | 2026-11-10T15:57Z | Natural Earth data for the map, tag v5.1.2, fetched by `tools/build-map.mjs` from raw.githubusercontent.com: populated places 1:10m (SHA-256 `fd3fa867a320cbd5c5b6bb5bc550afeec2939fb2cef688e508007282a55ac42f`), land 1:50m (`e874b27a51d146452be360cafb3cc50c86001074a67d534113e6534682f9826b`), lakes 1:50m (`d350b75978b26fe839b797c2c529b2fb8f47fb3983c03f4964e36d5df9378a52`) | `region-na.json` (18 sites, coordinates from the data) and `coast-na.json` (39 land rings, 24 lake rings, 21 KB). The land and lake hashes equal the ones recorded for the hand-built v1. |
+| R13 | 2026-11-10T15:57Z | Phase 2 checkpoint: `npm test` | 84 of 84 pass. Tests were written before the code. Ten mutation checks all caught. Details in `docs/verification/results.md`. |
+| R14 | 2026-11-10T16:17Z | Phase 3: User Story 1 built; `npm test` and `npx playwright test tests/e2e/us1-shape.spec.ts` | Unit 104 of 104 (**corrected**: first written as 109, a miscount). End-to-end 12 of 12 (desktop and phone). First run: 12 failed because the tests reused a server on port 8765 that serves the hand-built v1; fixed by using port 8791 and never reusing. Second run found a touch ghost-click bug; fixed. |
+| R15 | 2026-11-10T16:33Z | Phases 4 to 7: `npm test`, `npm run test:e2e` | Unit 105 of 105. End-to-end 48 pass, 4 skipped by design, 0 fail. Color census in the fallback renderer: 0 and 0 at both sizes after fixes (first measured 0.017% green, 0.009% red on desktop). |
+| R16 | 2026-11-10T17:06Z | RFC 2328 and RFC 2991 downloaded again with `curl` from rfc-editor.org for the text review | SHA-256 equal to the hashes recorded for the hand-built v1 (`981690e2…f50c`, `7ed2e595…1e7f`). RFC 2328 sections 16.1, 16.1.1, 16.8, 9.2, 13.2, C.3 and A.4.2 read; RFC 2991 searched, not read in full. |
+| R17 | 2026-11-10T17:06Z | `python3 tools/frr_check.py`: T1 and T2 as FRR routers in Docker, image `quay.io/frrouting/frr:10.7.1` (digest `sha256:e995beaa50fdc9edb35eadcfefa29b7f062cc06f2b812613789b68fa541554d2`, arm64, already on the machine), hello 1 s, dead 4 s | Pass on the first attempt: all adjacencies Full, 21 of 21 compared routes match. Lab removed afterwards. |
+| R18 | 2026-11-10T17:06Z | Phase 8: `npm run test:e2e` with the WebGL renderer as default; hero art by `tools/make-card.mjs`; frame time read from the page in headless Chromium (WebGL on SwiftShader) | Census zero in both renderers. One suite run had 1 failure of 64: a race in a test, fixed. Final run recorded below. |
+| R19 | 2026-11-10T17:25Z | `/code-review high src tools tests` (Claude Code skill, run by a forked reviewer on the same model); fixes by the build agent | 10 findings, all fixed, none left. Details in `docs/capture-log.md` step 70 and `docs/verification/results.md`. |
+| R20 | 2026-11-10T17:44Z | After the review fixes: `npm test`, `npm run test:e2e`, `python3 tools/frr_check.py` (second run, same image) | Unit 113 of 113. End-to-end 72 pass, 4 skipped by design. FRR: pass, 21 of 21, output identical to the first run; lab removed. |
+| R21 | 2026-11-10T17:49Z | `npm run record` on the final build; `node tools/run-ts.mjs tools/bot-runs.ts stage-1` as the second check; `ffprobe` and `ffmpeg` to read the files and pull three frames | Both videos 7,302 delivered at 6:51; Node run equal. SHA-256 of the videos in `docs/verification/results.md`. |
+| R22 | 2026-11-10T17:54Z | Fresh-copy check on a clone of `69aa8d4`: `npm ci` (45 packages from the npm registry, by the lockfile), `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e` | All pass: 113 unit, 72 end-to-end with 4 skipped by design, `dist/` equal to a fresh build. |
+| R23 | 2026-11-10T17:58Z | `docs/spec-map.png` rendered from `docs/spec-map.html` with Playwright's Chromium. The page fetched IBM Plex from fonts.googleapis.com and fonts.gstatic.com (a generic headless browser request, nothing identifying) | 3840×3892 PNG. Looked at. |
+| R24 | 2026-11-10T18:04Z | Second `/code-review high`, a new forked session of `claude-fable-5-2`, over the files changed by the first round (178,165 tokens and 36 tool calls as reported by the harness); fixes by the build agent | 10 findings: 9 fixed, 1 left and recorded. `docs/verification/results.md`. |
+| R25 | 2026-11-10T18:26Z | After the second round: `npm test`, `npm run test:e2e` (twice), `npm run verify:dist`, `python3 tools/frr_check.py` (third run) | Unit 121 of 121. End-to-end 74 pass, 4 skipped by design, after one test helper was rewritten. `dist/` matches at `7401e30`. FRR: pass, 21 of 21. |
+| R26 | 2026-11-10T18:36Z | Third `/code-review high`, a third forked session of `claude-fable-5-2` (181,368 tokens and 22 tool calls as reported by the harness); triage and fixes by the build agent | 10 findings: 8 fixed, 2 left; 3 more the reviewer cut, left. No fourth review, by the owner's word. |
+| R27 | 2026-11-10T18:46Z | After the third round: `npm test`, `npm run test:e2e`, `npm run verify:dist`, `python3 tools/frr_check.py` (fourth run), `node tools/confirm-runtime.mjs` | Unit 124 of 124. End-to-end 74 pass, 4 skipped by design. `dist/` matches at `9b813ab`. FRR: pass, 21 of 21, identical output. Runtime section confirmed. |
+| R28 | 2026-11-10T18:50Z | `npm run record` on the final code; `node tools/run-ts.mjs tools/bot-runs.ts stage-1`; `ffprobe`, `ffmpeg` for two frames | Both videos 7,302 delivered at 6:51; Node run equal. |
+| R29 | 2026-11-10T18:52Z | `node tools/confirm-runtime.mjs` on the final build; `docs/spec-map.png` rendered again (the page fetched IBM Plex from Google Fonts with a generic headless browser request) | Runtime section confirmed, 8 of 8. Spec map shows 124, 74 and 198. |
+| R30 | 2026-11-10T18:58Z | Fresh-copy check on a clone of `0e8572a`: `npm ci`, `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e`, `node tools/confirm-runtime.mjs` | All pass: 124 unit, 74 end-to-end with 4 skipped by design, `dist/` equal to a fresh build, runtime 8 of 8. |
+| R31 | 2026-11-10T19:30Z | `node tools/make-card.mjs arcade 7764 450 0.93` (Playwright Chromium, cwebp); `npm run build`, `npm run verify:dist`, `npm test`, `npx playwright test` on `us1-shape`, `us4-access`, `us5-endless` and the offline tests | New `public/hero.webp`, SHA-256 `8f5b5669…a94c`. All checks pass. |
+| R32 | 2026-11-10T19:33Z | gitleaks 8.30.1 over the working tree; `git push origin speckit-rebuild`; `gh api` to read the branch head and compare with `main`; `gh pr create` and `gh pr edit` | No leaks. Pushed `5fd0490..dbc1179`. Pull request #2 open, mergeable, not merged. |
+| R33 | 2026-11-10T22:42Z | `gh pr view 2`, `gh repo view`, `git ls-remote origin`, `git fetch` and `git rev-list --left-right --count origin/main...HEAD` before the merge; then `gh pr merge 2 --merge --match-head-commit` on the commit that holds this line | Before: open, mergeable, clean, no checks configured; `main` and tag `v1-handbuilt` at `f608e01`; 27 commits ahead of `main`, none behind. The merge's own result is on GitHub's page for pull request #2, not here: this file is part of what is merged. |
+
+## Changes of direction by the owner in the rebuild
+
+| When | What |
+| --- | --- |
+| 2026-11-10, about 15:05Z | Dropped the review between lab steps: "go, commit as you go, take your recommendations". K1–K5 are decided as the agent recommended; see the capture log's questions table. |
+| 2026-11-10, about 18:28Z | After two code reviews of ten findings each: "if the reviews keep coming back and finding 10 things and 10 things, and they're not of importance, we don't need to keep reviewing for the sake of reviewing." And the goal for the rest: the documentation "buttoned up according to how John's repo mentions it, in order to send it to his arcade". A third review was already running; its findings are fixed only where they matter, and no fourth is run. |
+| 2026-11-10, about 19:25Z | "go ahead and push, and I consent": the branch is to be pushed, and the consent to publish covers the rebuilt game. Then "give me a better hero image": the card was made again from a different moment of play before the push. |
+
+## Decisions the agent made without asking in the rebuild
+
+| Decision | Why |
+| --- | --- |
+| Updated `docs/capture-log.md` and `docs/runbook.html` during the constitution command, which says to write only the constitution file | The owner's standing rule is that every step is logged as it happens |
+| Nothing is pushed | The owner said "commit as you go" and did not mention pushing |
+| The rebuild writes its code anew and does not copy from tag `v1-handbuilt` | `docs/PID.md` amendment 1.3 says the rebuild starts from a clean slate |
+| Changes made while a reward waits to be chosen are held as pending, as in a pause, and the spec's FR-016 now says so | Code review found that such changes were announced as done but not applied. The approved input says only that the game pauses for the choice. Marked in the spec for the owner's review. |
+| The reward choice is no longer marked as a modal dialog | It never blocked the map or the panels, so the mark was untrue for assistive technology |
+| All ten code-review findings were fixed without asking which to fix | The owner's standing rule: fix the real findings, report any left. None was left. |
+| The FRR lab was built a second time in Docker | The comparison tool was changed by two review fixes, so its earlier pass no longer vouched for it |
+| The seeded-run videos are committed to the repository | C7's evidence asks for them in the repo. The owner's choice to keep the showcase video of the hand-built v1 private is read as covering that video only (open item L7). |
+| Opened pull request #2 into `main` after the push, and did not merge it | The agent had offered to "push and open the pull request into `main`" and the owner answered "go ahead and push"; the agent read that as the go-ahead for both. Merging changes what the public default branch holds, so it is left to the owner. |
+| The first pull request description was 155 words, over the owner's limit of 150; it was shortened to 146 a minute later | The agent sent it before checking its own count |
+| Pull request #2 is merged with a merge commit, not squashed or rebased, and branch `speckit-rebuild` is kept | The owner said "merge the pull request" (2026-11-10T22:42Z). A merge commit keeps the commits these records name, such as `9b813ab` and `0e8572a`, reachable from `main` under the same hashes; a squash or a rebase would not. Pull request #1 was merged the same way. |
