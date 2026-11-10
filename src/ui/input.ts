@@ -59,6 +59,8 @@ export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void 
   /** A link that was tapped and waits for the browser's click before its panel opens. */
   let tapped: LinkId = 0;
   let pinch = { distance: 1, x: 0, y: 0 };
+  /** The map point a drag or a pinch is holding. */
+  let held = { x: 0, y: 0 };
 
   const position = (event: PointerEvent | WheelEvent): { x: number; y: number } => {
     const box = canvas.getBoundingClientRect();
@@ -82,6 +84,7 @@ export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void 
       game.drag = null;
       mode = "pinch";
       pinch = pinchState();
+      held = hooks.camera.toMap(pinch.x, pinch.y);
       return;
     }
     if (pointers.size > 2) return;
@@ -99,6 +102,7 @@ export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void 
       tapLink = link.id;
     } else {
       mode = "pan";
+      held = hooks.camera.toMap(at.x, at.y);
     }
   });
 
@@ -109,9 +113,10 @@ export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void 
     const at = position(event);
     pointers.set(event.pointerId, at);
     if (mode === "pinch" && pointers.size >= 2) {
+      // The map point between the fingers stays between the fingers while they spread or move.
       const now = pinchState();
       hooks.camera.zoomAt(now.distance / pinch.distance, now.x, now.y);
-      hooks.camera.panBy(now.x - pinch.x, now.y - pinch.y);
+      hooks.camera.pin(held, now.x, now.y);
       pinch = now;
       hooks.moved();
       return;
@@ -122,8 +127,9 @@ export function attachInput(canvas: HTMLCanvasElement, hooks: InputHooks): void 
       game.drag.y = at.y;
     } else if (mode === "tap-link" && moved) {
       mode = "pan";
+      held = hooks.camera.toMap(previous.x, previous.y);
     } else if (mode === "pan") {
-      hooks.camera.panBy(at.x - previous.x, at.y - previous.y);
+      hooks.camera.pin(held, at.x, at.y);
       hooks.moved();
     }
   });

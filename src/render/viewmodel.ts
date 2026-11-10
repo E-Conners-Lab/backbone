@@ -74,6 +74,8 @@ export interface Effect {
   x: number;
   y: number;
   startMs: number;
+  /** The simulation step at which it began. */
+  step: number;
 }
 
 export interface Scene {
@@ -117,6 +119,8 @@ export interface ViewState {
 
 export const SPARK_MS = 700;
 export const RIPPLE_MS = 1600;
+/** An effect is over after this many simulation steps, however little real time has passed. */
+const EFFECT_STEPS = 60;
 const SWEEP_MS = 9000;
 const GRID_KM = 400;
 const GRID_DEPTH = 0.9;
@@ -277,7 +281,7 @@ export function buildScene(world: World | null, view: ViewState): Scene {
   for (const effect of view.effects) {
     const duration = effect.kind === "spark" ? SPARK_MS : RIPPLE_MS;
     const age = (view.nowMs - effect.startMs) / duration;
-    if (age < 0 || age >= 1) continue;
+    if (age < 0 || age >= 1 || world.step - effect.step > EFFECT_STEPS) continue;
     const p = camera.toScreen(effect.x, effect.y);
     scene.effects.push({ kind: effect.kind, x: p.x, y: p.y, age });
   }

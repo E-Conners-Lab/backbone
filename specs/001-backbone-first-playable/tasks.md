@@ -123,14 +123,14 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Implementation for User Story 2
 
-- [ ] T038 [US2] Add load states and second cues to `src/render/viewmodel.ts`, `src/render/overlay.ts` and `src/render/canvas2d.ts`: congestion amber, thicker, patterned, warning icon; failure magenta, broken line, cut icon; dark site hollow ring, slashed icon; capacity rails beside a link; queued packets stacked at the sending end (FR-008, FR-011, FR-033, AC6, AC10).
-- [ ] T039 [US2] Add the cut spark and the reconvergence ripple to `src/render/viewmodel.ts` as view effects driven by step events, drawn in `src/render/canvas2d.ts` (AC9, FR-017).
-- [ ] T040 [US2] Add the game-over screen to `src/ui/screens.ts`: traffic delivered, time survived, seed, the time-lapse (the recorded run simulated again at high speed) and New run (AC11, FR-019, FR-021, FR-026).
-- [ ] T041 [P] [US2] Add event messages to `src/ui/messages.ts` and `src/ui/hud.ts`: fiber cut, repair, a site gone dark, a site appearing (AC7, AC10, FR-009, FR-018).
+- [X] T038 [US2] Add load states and second cues to `src/render/viewmodel.ts`, `src/render/overlay.ts` and `src/render/canvas2d.ts`: congestion amber, thicker, patterned, warning icon; failure magenta, broken line, cut icon; dark site hollow ring, slashed icon; capacity rails beside a link; queued packets stacked at the sending end (FR-008, FR-011, FR-033, AC6, AC10).
+- [X] T039 [US2] Add the cut spark and the reconvergence ripple to `src/render/viewmodel.ts` as view effects driven by step events, drawn in `src/render/canvas2d.ts` (AC9, FR-017).
+- [X] T040 [US2] Add the game-over screen to `src/ui/screens.ts`: traffic delivered, time survived, seed, the time-lapse (the recorded run simulated again at high speed) and New run (AC11, FR-019, FR-021, FR-026).
+- [X] T041 [P] [US2] Add event messages to `src/ui/messages.ts` and `src/ui/hud.ts`: fiber cut, repair, a site gone dark, a site appearing (AC7, AC10, FR-009, FR-018).
 
 ### Checks for User Story 2
 
-- [ ] T042 [US2] Write `tests/e2e/us2-operate.spec.ts`: a scripted run to game over; the drop meter equals the simulation's drops (AC7, FR-009, FR-010); an upgrade raises the tier and leaves the cost (AC8, FR-014); a cut link is shown cut and routes change at the next step (AC9); a dark site (AC10); the end screen with score, time and time-lapse (AC11); congestion shown with its number in the inspector (AC6).
+- [X] T042 [US2] Write `tests/e2e/us2-operate.spec.ts`: a scripted run to game over; the drop meter equals the simulation's drops (AC7, FR-009, FR-010); an upgrade raises the tier and leaves the cost (AC8, FR-014); a cut link is shown cut and routes change at the next step (AC9); a dark site (AC10); the end screen with score, time and time-lapse (AC11); congestion shown with its number in the inspector (AC6).
 
 **Checkpoint**: User Stories 1 and 2 work together.
 
@@ -144,12 +144,12 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] Add pause to `src/main.ts`: Space, the pause button and a hidden page all pause; changes made while paused are checked against a copy of the world, shown as pending (dashed link, pending cost, budget after pending spends), and all sent in the first step after resume (FR-024, FR-025, AC12, AC14).
-- [ ] T044 [US3] Write `src/ui/inspector.ts`: the link table (two sites, cost, capacity, utilization in each direction, state, pending change), the site list (code, router ID, state), and the selected site's route table from the world in force, without pending changes (AC13, AC26, FR-031). Show utilization numbers on the map while paused in `src/render/overlay.ts` (FR-030).
+- [X] T043 [US3] Add pause to `src/main.ts`: Space, the pause button and a hidden page all pause; changes made while paused are checked against a copy of the world, shown as pending (dashed link, pending cost, budget after pending spends), and all sent in the first step after resume (FR-024, FR-025, AC12, AC14).
+- [X] T044 [US3] Write `src/ui/inspector.ts`: the link table (two sites, cost, capacity, utilization in each direction, state, pending change), the site list (code, router ID, state), and the selected site's route table from the world in force, without pending changes (AC13, AC26, FR-031). Show utilization numbers on the map while paused in `src/render/overlay.ts` (FR-030).
 
 ### Checks for User Story 3
 
-- [ ] T045 [US3] Write `tests/e2e/us3-pause.spec.ts`: AC12, AC13, AC14, AC26, and a full run with every decision made while paused (C3 evidence).
+- [X] T045 [US3] Write `tests/e2e/us3-pause.spec.ts`: AC12, AC13, AC14, AC26, and a full run with every decision made while paused (C3 evidence).
 
 **Checkpoint**: User Stories 1 to 3 work together.
 
@@ -163,14 +163,14 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Add touch gestures to `src/ui/input.ts`: pinch zooms, two-finger drag pans, tap opens a link's options (AC15, FR-029).
-- [ ] T047 [US4] Add keyboard play to `src/ui/inspector.ts` and `src/ui/input.ts`: site and link buttons, Enter to start and finish a link, number keys 1–4 for tools, I, Escape, + and −, arrow keys; the focused site or link outlined on the map; every control with a readable name (AC16, AC17, FR-029).
-- [ ] T048 [P] [US4] Write `src/ui/settings.ts`: reduced motion (`auto`, `on`, `off`), stored and validated; the `motion` and `renderer` URL switches; the renderer stops sweeps, parallax and trails when it is on (AC19, FR-034).
-- [ ] T049 [P] [US4] Finish the layouts in `src/ui/styles.css`: landscape as designed, portrait with a stacked HUD, no text smaller than 16 CSS pixels at 1920×1080 or 11 CSS pixels at 844×390; the layout adapts when the window is resized or rotated during a run (FR-037, spec Edge Cases).
+- [X] T046 [US4] Add touch gestures to `src/ui/input.ts`: pinch zooms, two-finger drag pans, tap opens a link's options (AC15, FR-029).
+- [X] T047 [US4] Add keyboard play to `src/ui/inspector.ts` and `src/ui/input.ts`: site and link buttons, Enter to start and finish a link, number keys 1–4 for tools, I, Escape, + and −, arrow keys; the focused site or link outlined on the map; every control with a readable name (AC16, AC17, FR-029).
+- [X] T048 [P] [US4] Write `src/ui/settings.ts`: reduced motion (`auto`, `on`, `off`), stored and validated; the `motion` and `renderer` URL switches; the renderer stops sweeps, parallax and trails when it is on (AC19, FR-034).
+- [X] T049 [P] [US4] Finish the layouts in `src/ui/styles.css`: landscape as designed, portrait with a stacked HUD, no text smaller than 16 CSS pixels at 1920×1080 or 11 CSS pixels at 844×390; the layout adapts when the window is resized or rotated during a run (FR-037, spec Edge Cases).
 
 ### Checks for User Story 4
 
-- [ ] T050 [US4] Write `tests/e2e/census.ts` (decode a screenshot and report the share of strongly colored pixels in each band) and `tests/e2e/us4-access.spec.ts`: touch at 844×390 (AC15), mouse and keys at 1920×1080 (AC16), keyboard only (AC17), reduced motion (AC19), the census, reported as numbers (AC18, FR-032b), every control on every screen has a non-empty accessible name (FR-029), the smallest text size at both viewports (FR-037), and a resize during a run leaves the run unchanged. Together these are SC-008 and the C4 evidence.
+- [X] T050 [US4] Write `tests/e2e/census.ts` (decode a screenshot and report the share of strongly colored pixels in each band) and `tests/e2e/us4-access.spec.ts`: touch at 844×390 (AC15), mouse and keys at 1920×1080 (AC16), keyboard only (AC17), reduced motion (AC19), the census, reported as numbers (AC18, FR-032b), every control on every screen has a non-empty accessible name (FR-029), the smallest text size at both viewports (FR-037), and a resize during a run leaves the run unchanged. Together these are SC-008 and the C4 evidence.
 
 **Checkpoint**: User Stories 1 to 4 work together.
 
@@ -184,13 +184,13 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Implementation for User Story 5
 
-- [ ] T051 [US5] Finish the welcome screen in `src/ui/screens.ts`: a place for the hero art (the image itself arrives in T058; until then the live map shows behind the card), the briefing card, the seed field ("1 to 24 letters, digits or hyphens"; empty gives a random seed; anything else refused with a text message), Start, best scores, About the model, the reduced-motion switch (FR-022, FR-027, AC21).
-- [ ] T052 [P] [US5] Write `src/ui/scores.ts` and `tests/unit/scores.test.ts`: up to five entries of `{ score, steps, seed }`, "whole numbers ≥ 0", sorted by score then steps; anything invalid read back is dropped; a refused storage leaves the game playable and says scores are not kept (FR-019, FR-023, AC23, SEC-11).
-- [ ] T053 [P] [US5] Add the About the model panel to `src/ui/screens.ts` from `src/content/text.json`, reachable from the welcome and pause screens (FR-028).
+- [X] T051 [US5] Finish the welcome screen in `src/ui/screens.ts`: a place for the hero art (the image itself arrives in T058; until then the live map shows behind the card), the briefing card, the seed field ("1 to 24 letters, digits or hyphens"; empty gives a random seed; anything else refused with a text message), Start, best scores, About the model, the reduced-motion switch (FR-022, FR-027, AC21).
+- [X] T052 [P] [US5] Write `src/ui/scores.ts` and `tests/unit/scores.test.ts`: up to five entries of `{ score, steps, seed }`, "whole numbers ≥ 0", sorted by score then steps; anything invalid read back is dropped; a refused storage leaves the game playable and says scores are not kept (FR-019, FR-023, AC23, SEC-11).
+- [X] T053 [P] [US5] Add the About the model panel to `src/ui/screens.ts` from `src/content/text.json`, reachable from the welcome and pause screens (FR-028).
 
 ### Checks for User Story 5
 
-- [ ] T054 [US5] Write `tests/e2e/us5-endless.spec.ts`: AC21 (typed and random seeds, seed shown), AC22 (same seed and inputs, same final score, in the browser), AC23 (best score shown after a reload).
+- [X] T054 [US5] Write `tests/e2e/us5-endless.spec.ts`: AC21 (typed and random seeds, seed shown), AC22 (same seed and inputs, same final score, in the browser), AC23 (best score shown after a reload).
 
 **Checkpoint**: All five stories work.
 

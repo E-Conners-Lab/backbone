@@ -26,8 +26,10 @@ export function mix(a: string, b: string, t: number): string {
 export function linkColor(link: SceneLink, palette: Palette): string {
   if (link.look === "cut") return palette.failure!;
   if (link.look === "congested" || link.look === "dropping") return palette.congestion!;
-  if (link.pending === "new") return palette.linkBright!;
-  return mix(palette.link!, palette.linkBright!, Math.min(1, link.load * 0.9));
+  // A loaded link brightens toward white, never toward cyan: cyan light next to an amber
+  // link blends into the green band, and white next to anything keeps that thing's hue.
+  if (link.pending === "new") return palette.pulse!;
+  return mix(palette.link!, palette.pulse!, Math.min(1, link.load) * 0.7);
 }
 
 export class Canvas2dRenderer implements Renderer {
@@ -124,9 +126,13 @@ export class Canvas2dRenderer implements Renderer {
       else if (link.pending === "new") ctx.setLineDash([7 * link.s, 6 * link.s]);
       for (const segment of segments) {
         this.path(segment);
-        ctx.strokeStyle = css(color, 0.16 * link.glow * faded);
-        ctx.lineWidth = link.width * 3.6;
-        ctx.stroke();
+        // A cut link is dark: it has no halo. That also keeps magenta light from mixing
+        // with the amber of a congested link beside it, which would land in the red band.
+        if (link.look !== "cut") {
+          ctx.strokeStyle = css(color, 0.16 * link.glow * faded);
+          ctx.lineWidth = link.width * 3.6;
+          ctx.stroke();
+        }
         ctx.strokeStyle = css(color, (0.55 + 0.45 * link.glow) * faded);
         ctx.lineWidth = link.width;
         ctx.stroke();
@@ -166,7 +172,7 @@ export class Canvas2dRenderer implements Renderer {
       ctx.arc(site.x, site.y, r, 0, Math.PI * 2);
       ctx.fill();
       if (site.state !== "dark") {
-        ctx.fillStyle = css(ring, 0.14);
+        ctx.fillStyle = css(p.link!, 0.2);
         ctx.beginPath();
         ctx.arc(site.x, site.y, r * 2.1, 0, Math.PI * 2);
         ctx.fill();
@@ -206,7 +212,9 @@ export class Canvas2dRenderer implements Renderer {
         ctx.fill();
       } else {
         const radius = scene.reducedMotion ? 70 : 30 + effect.age * Math.max(scene.width, scene.height) * 0.45;
-        ctx.strokeStyle = css(p.failure!, 0.7 * fade);
+        // The ripple is ice white, not magenta: it crosses every link on the map, and white
+        // light over amber or blue keeps their hue.
+        ctx.strokeStyle = css(p.pulse!, 0.6 * fade);
         ctx.lineWidth = 1 + 3 * fade;
         ctx.beginPath();
         ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
@@ -216,7 +224,7 @@ export class Canvas2dRenderer implements Renderer {
 
     // A link being dragged out from a site.
     if (scene.drag) {
-      ctx.strokeStyle = css(scene.drag.affordable ? p.linkBright! : p.congestion!, 0.9);
+      ctx.strokeStyle = css(scene.drag.affordable ? p.pulse! : p.congestion!, 0.9);
       ctx.lineWidth = 2;
       ctx.setLineDash([7, 6]);
       ctx.beginPath();

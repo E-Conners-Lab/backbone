@@ -115,6 +115,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
   const unit = scene.unit;
   // Map text is one unit tall, like the smallest text on the page (FR-037).
   const small = unit;
+  const icons: (() => void)[] = [];
 
   for (const link of scene.links) {
     const g = linkGeometry(link);
@@ -122,7 +123,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
 
     // Capacity tier: thin rails beside the link, one pair per tier above the first.
     const tier = link.pendingTier ?? link.tier;
-    ctx.strokeStyle = css(link.look === "cut" ? palette.failure! : palette.linkBright!, link.pending === "remove" ? 0.25 : 0.7);
+    ctx.strokeStyle = css(link.look === "cut" ? palette.failure! : palette.pulse!, link.pending === "remove" ? 0.2 : 0.55);
     ctx.lineWidth = 1;
     if (link.pendingTier !== null) ctx.setLineDash([4, 4]);
     for (let rail = 1; rail <= tier; rail++) {
@@ -178,23 +179,21 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
       report.labels++;
     }
 
+    // Icons sit a little off the line, away from the cost label, and are drawn last so that
+    // no label can cover them.
     const iconR = Math.max(8, unit * 0.62) * Math.min(1.15, link.s);
-    const ix = g.mx - g.ux * iconR * 2.6;
-    const iy = g.my - g.uy * iconR * 2.6;
+    const along = g.length * 0.14;
+    const ix = g.mx - g.ux * along - g.nx * (edge + iconR * 1.5);
+    const iy = g.my - g.uy * along - g.ny * (edge + iconR * 1.5);
     if (link.look === "congested" || link.look === "dropping") {
-      warningIcon(ctx, palette, ix, iy, iconR);
-      report.icons++;
-      if (link.look === "dropping") {
-        dropMark(ctx, palette, ix + g.ux * iconR * 5.2, iy + g.uy * iconR * 5.2 - iconR * 0.4, iconR * 0.8);
-        report.icons++;
-      }
+      icons.push(() => warningIcon(ctx, palette, ix, iy, iconR));
+      if (link.look === "dropping") icons.push(() => dropMark(ctx, palette, ix + iconR * 1.9, iy - iconR * 0.35, iconR * 0.75));
     } else if (link.look === "cut") {
-      cutIcon(ctx, palette, g.mx, g.my, iconR, Math.atan2(g.uy, g.ux));
-      report.icons++;
+      icons.push(() => cutIcon(ctx, palette, g.mx, g.my, iconR, Math.atan2(g.uy, g.ux)));
     }
 
     if (link.focused) {
-      ctx.strokeStyle = palette.focus!;
+      ctx.strokeStyle = palette.text!;
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
       const off = edge + 9;
@@ -211,12 +210,9 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
 
   for (const site of scene.sites) {
     const r = 9 * site.s;
-    if (site.state === "dark") {
-      slashIcon(ctx, palette, site, r * 1.5);
-      report.icons++;
-    }
+    if (site.state === "dark") icons.push(() => slashIcon(ctx, palette, site, r * 1.5));
     if (site.focused || site.armed) {
-      ctx.strokeStyle = palette.focus!;
+      ctx.strokeStyle = palette.text!;
       ctx.lineWidth = 2;
       if (site.focused) ctx.setLineDash([5, 4]);
       ctx.beginPath();
@@ -232,6 +228,9 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
       report.labels++;
     }
   }
+
+  for (const draw of icons) draw();
+  report.icons = icons.length;
 
   if (scene.drag) {
     const { bx, by, km, affordable } = scene.drag;

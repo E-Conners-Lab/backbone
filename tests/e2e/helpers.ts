@@ -141,10 +141,14 @@ export async function twoFingers(page: Page, from: [{ x: number; y: number }, { 
   await frame(page);
 }
 
+/** A site's place on screen. Waits for the next drawn frame if the site is not there yet. */
 export async function site(page: Page, id: number): Promise<HookSite> {
-  const found = (await sites(page)).find((s) => s.id === id);
-  if (!found) throw new Error(`site ${id} is not on the map`);
-  return found;
+  for (let i = 0; i < 20; i++) {
+    const found = (await sites(page)).find((s) => s.id === id);
+    if (found) return found;
+    await frame(page);
+  }
+  throw new Error(`site ${id} is not on the map`);
 }
 
 /** Lays a link by dragging between two sites, and checks that it was accepted. */

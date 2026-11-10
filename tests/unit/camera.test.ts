@@ -49,6 +49,17 @@ describe("camera (FR-029: touch targets stay right on the tilted map)", () => {
     expect(c.toScreen(mapPoint.x, mapPoint.y).x).toBeCloseTo(centre.x + 50, 6);
   });
 
+  it("a drag keeps the grabbed map point under the pointer, anywhere on the tilted map", () => {
+    const c = camera(1920, 1080);
+    for (const [fromX, fromY, toX, toY] of [[200, 900, 320, 840], [1500, 150, 1300, 400], [960, 540, 100, 100]] as const) {
+      const grabbed = c.toMap(fromX, fromY);
+      c.pin(grabbed, toX, toY);
+      const under = c.toMap(toX, toY);
+      expect(under.x).toBeCloseTo(grabbed.x, 6);
+      expect(under.y).toBeCloseTo(grabbed.y, 6);
+    }
+  });
+
   it("stays inside its zoom limits", () => {
     const c = camera(844, 390);
     for (let i = 0; i < 50; i++) c.zoomAt(2, 100, 100);

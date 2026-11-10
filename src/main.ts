@@ -121,7 +121,8 @@ function boot(): void {
         const b = world.sites[link.b - 1]!;
         const startMs = performance.now();
         game.effects = game.effects.filter((e) => startMs - e.startMs < RIPPLE_MS);
-        game.effects.push({ kind: "spark", x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, startMs }, { kind: "ripple", x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, startMs });
+        const at = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, startMs, step: world.step };
+        game.effects.push({ kind: "spark", ...at }, { kind: "ripple", ...at });
       }
     }
     if (events.linkRestored !== null) {

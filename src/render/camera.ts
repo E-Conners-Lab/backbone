@@ -65,10 +65,20 @@ export class Camera {
     return { x: this.cx + p / scale / this.zoom, y: this.cy - v / this.zoom };
   }
 
-  /** Moves the view by a drag of (dx, dy) screen pixels. */
+  /** Moves the view by (dx, dy) screen pixels, measured at the centre. For keys. */
   panBy(dx: number, dy: number): void {
     this.cx -= dx / this.zoom;
     this.cy += dy / (this.zoom * Math.cos(this.tilt));
+  }
+
+  /**
+   * Moves the view so that a map point sits under a screen point. A drag grabs the map
+   * point under the pointer and keeps it there, which stays exact on the tilted map.
+   */
+  pin(map: { x: number; y: number }, sx: number, sy: number): void {
+    const under = this.toMap(sx, sy);
+    this.cx += map.x - under.x;
+    this.cy += map.y - under.y;
   }
 
   /** Zooms by `factor`, keeping the map point under (sx, sy) where it is. */
