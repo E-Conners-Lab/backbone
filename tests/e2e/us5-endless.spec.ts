@@ -1,16 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
-import { advance, lay, open, state } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { advance, lay, open, state, toGameOver } from "./helpers";
 
 // User Story 5: endless mode.
-
-/** Lets a run play out to game over, taking fiber whenever a reward is offered. */
-async function toGameOver(page: Page): Promise<void> {
-  for (let i = 0; i < 600 && !(await state(page)).over; i++) {
-    if ((await state(page)).rewardPending && (await page.locator("#reward").isVisible())) await page.locator("#reward-fiber").click();
-    else await advance(page, 200);
-  }
-  expect((await state(page)).over).toBe(true);
-}
 
 test("AC21: a run starts from a typed seed or a random one, and the seed is shown", async ({ page }) => {
   await open(page);

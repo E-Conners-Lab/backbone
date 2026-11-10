@@ -74,6 +74,22 @@ describe("explanatory text matches the spec (C1, FR-027, FR-028)", () => {
   });
 });
 
+describe("the README describes the same game (C1, C7)", () => {
+  const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+  const text = validateText(textJson);
+
+  it("states every faithful note in the game's own words, and lists every simplification", () => {
+    for (const note of text.faithful) expect(readme, note.id).toContain(`| ${note.id} | ${note.text} |`);
+    for (const note of text.simplified) expect(readme, note.id).toMatch(new RegExp(`\\| ${note.id} \\| `));
+  });
+
+  it("gives the commands that exist in package.json", () => {
+    const scripts = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts as Record<string, string>;
+    for (const [, name] of readme.matchAll(/^npm run ([a-z0-9:]+)/gm)) expect(scripts[name!], `npm run ${name}`).toBeDefined();
+    expect(readme).toContain("npm test");
+  });
+});
+
 describe("rules stated in the spec are the ones in the data and the code", () => {
   it("the drop meter's three numbers equal FR-010", () => {
     expect(spec).toContain("**v1 values: size 100 drops, drain delay 3 seconds, drain interval 1 second.**");

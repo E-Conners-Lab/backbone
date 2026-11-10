@@ -200,11 +200,11 @@ description: "Task list for Backbone, first playable version (v1)"
 
 **Purpose**: The WebGL2 renderer and the effects, on top of a game that already plays correctly in the fallback renderer.
 
-- [ ] T055 Write `src/render/gl.ts`: draw the shared scene with instanced quads, glow and a half-resolution blur for bloom, with a final pass that scales a too-bright color down as a whole. Use it when a WebGL2 context can be created; otherwise fall back to the Canvas 2D renderer (FR-035, FR-036).
-- [ ] T056 Finish the four effects in `src/render/viewmodel.ts` and `src/render/gl.ts`: pulses with trails; link brightness and thickness that scale with load; the cut spark and reconvergence ripple; soft bloom; parallax on the grid, coastline and sweep only (FR-036).
-- [ ] T057 Write `tests/e2e/renderers.spec.ts`: with WebGL2 made unavailable the game falls back by itself and plays (AC20, FR-035); for the same seed and step both renderers report the same scene items through the test hook ("the same information"); the color census in each renderer, reported as numbers (FR-032b, SC-007).
-- [ ] T058 Write `tools/make-card.mjs`: capture a frame of the game's own renderer, convert it to `public/hero.webp`, check it is 16:9 and under 1 MB, and show it on the welcome screen (FR-038, SC-009, Q7).
-- [ ] T059 Compare the game with `mock/` at both sizes and measure desktop frame time; record both, and the census numbers, in `docs/verification/results.md`. The phone frame rate stays not run (SC-012).
+- [X] T055 Write `src/render/gl.ts`: draw the shared scene with instanced quads, glow and a half-resolution blur for bloom, with a final pass that scales a too-bright color down as a whole. Use it when a WebGL2 context can be created; otherwise fall back to the Canvas 2D renderer (FR-035, FR-036).
+- [X] T056 Finish the four effects in `src/render/viewmodel.ts` and `src/render/gl.ts`: pulses with trails; link brightness and thickness that scale with load; the cut spark and reconvergence ripple; soft bloom; parallax on the grid, coastline and sweep only (FR-036).
+- [X] T057 Write `tests/e2e/renderers.spec.ts`: with WebGL2 made unavailable the game falls back by itself and plays (AC20, FR-035); for the same seed and step both renderers report the same scene items through the test hook ("the same information"); the color census in each renderer, reported as numbers (FR-032b, SC-007).
+- [X] T058 Write `tools/make-card.mjs`: capture a frame of the game's own renderer, convert it to `public/hero.webp`, check it is 16:9 and under 1 MB, and show it on the welcome screen (FR-038, SC-009, Q7).
+- [X] T059 Compare the game with `mock/` at both sizes and measure desktop frame time; record both, and the census numbers, in `docs/verification/results.md`. The phone frame rate stays not run (SC-012).
 
 ---
 
@@ -212,10 +212,10 @@ description: "Task list for Backbone, first playable version (v1)"
 
 **Purpose**: The build output, the recorded evidence and the documents that describe the same game (C7).
 
-- [ ] T060 Write `tools/verify-dist.mjs`, run `npm run build`, and commit `dist/` after `npm run verify:dist` passes (plan D1).
-- [ ] T061 [P] Write `tests/e2e/offline.spec.ts`: a run against `dist/` with every non-local request blocked and counted; zero expected (SC-006, FR-039, C5 evidence).
+- [X] T060 Write `tools/verify-dist.mjs`, run `npm run build`, and commit `dist/` after `npm run verify:dist` passes (plan D1).
+- [X] T061 [P] Write `tests/e2e/offline.spec.ts`: a run against `dist/` with every non-local request blocked and counted; zero expected (SC-006, FR-039, C5 evidence).
 - [ ] T062 Write `tools/record-run.mjs` and record the seeded-run videos at 844×390 and 1920×1080 into `docs/verification/` (SC-005, C7 evidence).
-- [ ] T063 [P] Write `tools/frr_check.py`: build T1 and T2 from FRR containers, refuse to compare unless every adjacency is Full and every router ID is as configured, and compare cost and next hops with `tests/fixtures/ospf-cases.json` (plan D4; C1). Record the result, or record it as not run with the reason.
+- [X] T063 [P] Write `tools/frr_check.py`: build T1 and T2 from FRR containers, refuse to compare unless every adjacency is Full and every router ID is as configured, and compare cost and next hops with `tests/fixtures/ospf-cases.json` (plan D4; C1). Record the result, or record it as not run with the reason.
 - [ ] T064 Rewrite `README.md` in the StarterKit shape: status, how to play, what the game models (F1–F8, S1–S11), how it was built with the Spec Kit paths, the verification table, limits, including browsers other than Chromium (SC-010, C7).
 - [ ] T065 Review every sentence of explanatory text that ships, namely `src/content/text.json` and the model section of `README.md`, against the spec's two model tables and the cited RFC sections; record the review in `docs/verification/text-review.md` (C1 evidence).
 - [ ] T066 Record every acceptance criterion AC1–AC26 and every success criterion SC-001–SC-013 as pass, fail or not run, with the check that produced it, in `docs/verification/results.md`. SC-011 (the C2 evidence), SC-012 and SC-013 need a person and are recorded as not run (SC-004).

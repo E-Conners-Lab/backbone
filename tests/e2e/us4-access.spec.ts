@@ -1,7 +1,6 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { census } from "./census";
-import { advance, drag, frame, isPhone, lay, links, open, playTo, report, scene, site, sites, state, tap, twoFingers } from "./helpers";
+import { advance, censusRun, drag, frame, isPhone, lay, links, open, playTo, scene, site, sites, snapshot, state, tap, toGameOver, twoFingers } from "./helpers";
 
 // User Story 4: play on a phone, a laptop and a stage.
 
@@ -182,8 +181,7 @@ test("AC19: reduced motion stops sweeps, parallax and trails, and all state info
   await advance(page, 6500);
   await frame(page);
   expect((await state(page)).reducedMotion).toBe(true);
-  const still = await scene(page);
-  const stillReport = await report(page);
+  const { scene: still, drawn: stillReport } = await snapshot(page);
   expect(still.sweep).toBe(false);
   expect(still.trails).toBe(0);
   expect(still.pulses).toBeGreaterThan(20); // pulses are information, not decoration: they stay
@@ -198,8 +196,7 @@ test("AC19: reduced motion stops sweeps, parallax and trails, and all state info
   await open(page, "autostart=1&seed=stage-1&bot=1&motion=full");
   await advance(page, 6500);
   await frame(page);
-  const moving = await scene(page);
-  const movingReport = await report(page);
+  const { scene: moving, drawn: movingReport } = await snapshot(page);
   expect(moving.sweep).toBe(true);
   expect(moving.trails).toBeGreaterThan(20);
   expect(movingReport.labels).toBe(moving.looks.length + moving.siteStates.length + moving.siteStates.filter((s) => s.endsWith(":new")).length);
@@ -221,35 +218,12 @@ test("AC18: the color census of rendered frames, reported as numbers", async ({ 
     expect(c.redShare, `${color} red`).toBe(band === "red" ? 1 : 0);
   }
 
-  await open(page, "autostart=1&seed=stage-1&bot=1");
-  const shots: { moment: string; green: number; red: number; colored: number }[] = [];
-  const take = async (moment: string): Promise<void> => {
-    await frame(page);
-    const c = census(await page.screenshot());
-    shots.push({ moment, green: c.greenShare, red: c.redShare, colored: c.colored });
-  };
-  await advance(page, 1500);
-  await take("early run");
-  // The moment of a fiber cut: the spark and the ripple are on screen.
-  await advance(page, 1480);
-  for (let i = 0; i < 500 && !(await links(page)).some((l) => l.look === "cut"); i++) await advance(page, 1);
-  await take("fiber cut");
-  await advance(page, 3600);
-  await take("congested");
-  await page.keyboard.press("Space");
-  await take("paused with the inspector");
-  for (let i = 0; i < 200 && !(await state(page)).over; i++) await advance(page, 200);
-  await take("game over");
-
-  const renderer = (await state(page)).renderer;
-  const worst = { green: Math.max(...shots.map((s) => s.green)), red: Math.max(...shots.map((s) => s.red)) };
-  mkdirSync("test-results", { recursive: true });
-  writeFileSync(`test-results/census-${info.project.name}-${renderer}.json`, JSON.stringify({ project: info.project.name, renderer, worst, shots }, null, 2));
-  info.annotations.push({ type: "census", description: `${renderer}: worst green ${(worst.green * 100).toFixed(3)}%, worst red ${(worst.red * 100).toFixed(3)}%` });
-  for (const shot of shots) expect(shot.colored, shot.moment).toBeGreaterThan(1000);
+  // The census in the renderer the browser gets by default.
+  const result = await censusRun(page, info, "");
+  for (const shot of result.shots) expect(shot.colored, shot.moment).toBeGreaterThan(1000);
   // The regression guard of FR-032(b). The target is zero; the numbers are reported either way.
-  expect(worst.green).toBeLessThanOrEqual(0.01);
-  expect(worst.red).toBeLessThanOrEqual(0.01);
+  expect(result.worst.green).toBeLessThanOrEqual(0.01);
+  expect(result.worst.red).toBeLessThanOrEqual(0.01);
 });
 
 /** Controls on screen that have no readable name. */
@@ -318,10 +292,8 @@ test("FR-029, FR-037: every control has a readable name and no text is too small
   await expect(page.locator("#reward")).toBeVisible();
   await check("reward");
   await page.locator("#reward-upgrade").click();
-  for (let i = 0; i < 400 && !(await state(page)).over; i++) {
-    if ((await state(page)).rewardPending) await page.locator("#reward-fiber").click();
-    else await advance(page, 100);
-  }
+  await expect(page.locator("#reward")).toBeHidden();
+  await toGameOver(page);
   await expect(page.locator("#gameover")).toBeVisible();
   await check("game over");
 });

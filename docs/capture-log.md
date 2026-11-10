@@ -43,6 +43,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T15:57Z | Lab step 7 under way. Phase 2 checkpoint: the simulation is proven with no graphics, 84 unit tests pass |
 | 2026-11-10T16:17Z | User Story 1 playable in a browser and checked at phone and desktop sizes |
 | 2026-11-10T16:33Z | Stories 2 to 5 built and checked in the fallback renderer: 105 unit and 48 end-to-end tests pass; color census zero at both sizes |
+| 2026-11-10T17:06Z | The four effects are in: WebGL renderer with trails, load-scaled links, cut spark and ripple, bloom. FRR comparison passed. Hero art captured. |
 
 ## Steps and results
 
@@ -109,6 +110,11 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 61 | Phase 3, User Story 1: camera, shared view model, fallback renderer, label layer, HUD, input, link options, reward choice, screens, wiring | Done. 104 unit tests pass (**corrected**: this row first said 109, a miscount by the agent). End-to-end: 12 of 12 pass (AC1, AC2, AC4, AC5, AC24, AC25 at 1920×1080 by mouse and at 844×390 by touch). Two real problems were found on the way; see gotchas. |
 | 62 | Phases 4 to 7, User Stories 2 to 5: load states and second cues, spark and ripple, game over and time-lapse, pause with pending changes, inspector with router tables, touch gestures, keyboard play, reduced motion, layouts, seeds, best scores, About the model | Done. 105 unit tests pass. End-to-end 48 pass, 4 skipped by design (touch only at phone size; mouse, keyboard and resize only at desktop size). Table in `docs/verification/results.md`. |
 | 63 | Color census of screenshots in the fallback renderer (FR-032b) | 0 green-band and 0 red-band pixels at five moments, at both sizes. The first measurement was 25 green and 13 red of 144,085 on desktop; the causes were found and removed. |
+| 64 | Phase 8: WebGL2 renderer drawing the same scene as the fallback, with bloom; automatic fallback when WebGL is missing or lost mid-run; hero art from a frame of the game | Done. Both renderers report the same scene for the same step (AC20). Color census: 0 green-band and 0 red-band pixels in both renderers, at both sizes, at five moments. `public/hero.webp` is 1600×900, 52 KB, seed `autocon` at step 6,601. |
+| 65 | Compare with the approved mock; measure frame time | The look was strengthened toward the mock (more tilt, thicker and brighter links, larger site labels, stronger bloom). It is still plainer than the mock, and site rings are white, not cyan. Frame time in headless Chromium, where WebGL runs in software (SwiftShader): 36 frames a second at 1920×1080 with WebGL; 60 with the fallback and at phone size; main-thread work under 1 ms a frame. The phone measurement was **not run**. |
+| 66 | FRR comparison in Docker (`tools/frr_check.py`), one attempt | Pass. FRR 10.7.1, native arm64. 12 of 12 and 14 of 14 neighbor entries Full and router IDs verified before comparing. 21 of 21 compared routes match on cost and next hops: cases 1 to 5, 7 and 8, including after cost changes and link shutdowns. Case 6's tie-break is the game's own rule (S7) and is not compared. Containers and networks removed. Result in `docs/verification/frr-check.json`. |
+| 67 | Review of all shipped explanatory text against the spec and RFC 2328 (C1 evidence) | Done: `docs/verification/text-review.md`. RFC 2328 and RFC 2991 downloaded again; their hashes equal the ones recorded for the hand-built v1; the cited sections of RFC 2328 were read in this session. Every faithful note agrees. One reviewer, the agent that wrote the text. |
+| 68 | Security checks for the secure-build checklist | No markup sink (`innerHTML` and the like) in `src/`; no reference to another host in the build; no floating version; `npm audit` 0 vulnerabilities; gitleaks over the working tree: no leaks found. Checklist rewritten for the rebuilt code. |
 
 ## Gotchas
 
@@ -140,6 +146,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | The first color census was not zero: a few dozen pixels in the green and red bands at a congested moment | Cyan site rings, rails and busy links blended with amber links at their edges (green band); stale magenta sparks from the test's fast-forward lay over an amber link (red band) | Nothing cyan touches a link now, cut links have no halo, the ripple is white, and effects end with simulated time. Site rings are white, a deviation from the mock's cyan. |
 | Dragging the map made the point under the pointer slide away | The pan used the scale at the centre of the tilted map | A drag now pins the grabbed map point under the pointer |
 | An end-to-end test hung for three minutes | Its loop waited for a reward on a run that had already ended because the test left a site unlinked | Every waiting loop in the tests is bounded, and that test links all three sites |
+| An end-to-end check passed alone but timed out one run in three inside the suite | The test read "reward pending" and then clicked a reward button the game had already dismissed; the click waited for a button that never came back | The reward button is pressed only while its dialog is on screen, and every click now fails after 15 seconds with its reason |
+| Two end-to-end checks compared the screen with numbers read a moment earlier and sometimes failed | The game kept running between the two reads | Those checks stop the clock first |
+| The first hero frame was half covered by the inspector | The capture paused the game, and pausing opens the inspector at desktop width | The capture no longer pauses |
 
 ## Questions and answers
 

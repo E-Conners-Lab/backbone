@@ -13,8 +13,8 @@ export interface OverlayReport {
 
 const MONO = '"IBM Plex Mono", ui-monospace, monospace';
 
-function label(ctx: CanvasRenderingContext2D, palette: Palette, text: string, x: number, y: number, size: number, color: string, dashed = false): void {
-  ctx.font = `500 ${size}px ${MONO}`;
+function label(ctx: CanvasRenderingContext2D, palette: Palette, text: string, x: number, y: number, size: number, color: string, dashed = false, weight = 500): void {
+  ctx.font = `${weight} ${size}px ${MONO}`;
   const width = ctx.measureText(text).width;
   const padX = size * 0.35;
   const height = size * 1.35;
@@ -221,7 +221,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
       ctx.setLineDash([]);
     }
     const color = site.state === "dark" ? palette.failure! : palette.text!;
-    label(ctx, palette, site.code, site.x, site.y + r + small * 1.05, small, color);
+    label(ctx, palette, site.code, site.x, site.y + r + small * 1.2, small * 1.2, color);
     report.labels++;
     if (site.state === "new") {
       label(ctx, palette, "NEW", site.x, site.y - r - small * 1.05, small, palette.linkBright!);

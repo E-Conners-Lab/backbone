@@ -496,7 +496,12 @@ td.is-cut {
   text-align: center;
 }
 
-/* While a run is on screen the welcome hero is not needed. */
+/* hud=0 is for capturing the hero art: the map alone, with no controls and no focus outline. */
+.app[data-hud="off"] #overlay:focus-visible {
+  outline: none;
+}
+
+
 .app[data-hud="off"] .hud,
 .app[data-hud="off"] .controls,
 .app[data-hud="off"] .messages,

@@ -204,6 +204,11 @@ not prompts, and are not counted.
 | Workshop lab guide, `WORKSHOP/LAB/README.md` in `automateyournetwork/NAF_AC6` | `curl` from raw.githubusercontent.com at commit `b77da71d7c810dbdd678ff09856d9097c7da05ee`, into the session scratch folder | SHA-256 `44d7093e93b27203a46860b008d399bdbf73cd9b5813fe79bc037e9af734a810` |
 | ↳ `WORKSHOP/LAB/StarterKit/README.md` (the README shape) | Same | SHA-256 `8a08d1ac4a97e090dc23efe097d8135b14b6abfabbfb9d29d16629c4b07c9a98` |
 | Tag `v1-handbuilt` (the hand-built source) | Three lookups with `git ls-tree` and `git grep`: where the tuning constants lived, the hue bands in the palette test, and the name of the purity test. **No file was copied.** | Tag `v1-handbuilt` |
+| The approved visual mock, `mock/desktop-1920x1080.png` | Viewed, to compare the look; its stylesheet read for the palette and the base type size | Commit `5fd0490` |
+| Natural Earth v5.1.2 (`nvkelso/natural-earth-vector`): populated places 1:10m, land 1:50m, lakes 1:50m | `tools/build-map.mjs`, from raw.githubusercontent.com into a cache folder that is not committed | Hashes in step R12 |
+| RFC 2328 and RFC 2991 | `curl` from rfc-editor.org into the session scratch folder, for the text review | Same SHA-256 as recorded above for v1 |
+| The owner's saved lab note on FRR in Docker on this machine | The agent's memory folder for this project | Used for the image name and the health gate |
+| `README.md`, `ARCADE.md`, `docs/spec-map.html` and `docs/secure-build-checklist.md` as they described the hand-built v1 | Read before rewriting them | Commit `5fd0490` |
 
 ## Rebuild steps and checks
 
@@ -224,6 +229,9 @@ not prompts, and are not counted.
 | R13 | 2026-11-10T15:57Z | Phase 2 checkpoint: `npm test` | 84 of 84 pass. Tests were written before the code. Ten mutation checks all caught. Details in `docs/verification/results.md`. |
 | R14 | 2026-11-10T16:17Z | Phase 3: User Story 1 built; `npm test` and `npx playwright test tests/e2e/us1-shape.spec.ts` | Unit 104 of 104 (**corrected**: first written as 109, a miscount). End-to-end 12 of 12 (desktop and phone). First run: 12 failed because the tests reused a server on port 8765 that serves the hand-built v1; fixed by using port 8791 and never reusing. Second run found a touch ghost-click bug; fixed. |
 | R15 | 2026-11-10T16:33Z | Phases 4 to 7: `npm test`, `npm run test:e2e` | Unit 105 of 105. End-to-end 48 pass, 4 skipped by design, 0 fail. Color census in the fallback renderer: 0 and 0 at both sizes after fixes (first measured 0.017% green, 0.009% red on desktop). |
+| R16 | 2026-11-10T17:06Z | RFC 2328 and RFC 2991 downloaded again with `curl` from rfc-editor.org for the text review | SHA-256 equal to the hashes recorded for the hand-built v1 (`981690e2…f50c`, `7ed2e595…1e7f`). RFC 2328 sections 16.1, 16.1.1, 16.8, 9.2, 13.2, C.3 and A.4.2 read; RFC 2991 searched, not read in full. |
+| R17 | 2026-11-10T17:06Z | `python3 tools/frr_check.py`: T1 and T2 as FRR routers in Docker, image `quay.io/frrouting/frr:10.7.1` (digest `sha256:e995beaa50fdc9edb35eadcfefa29b7f062cc06f2b812613789b68fa541554d2`, arm64, already on the machine), hello 1 s, dead 4 s | Pass on the first attempt: all adjacencies Full, 21 of 21 compared routes match. Lab removed afterwards. |
+| R18 | 2026-11-10T17:06Z | Phase 8: `npm run test:e2e` with the WebGL renderer as default; hero art by `tools/make-card.mjs`; frame time read from the page in headless Chromium (WebGL on SwiftShader) | Census zero in both renderers. One suite run had 1 failure of 64: a race in a test, fixed. Final run recorded below. |
 
 ## Changes of direction by the owner in the rebuild
 

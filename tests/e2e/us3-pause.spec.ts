@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { advance, frame, isPhone, lay, links, open, playTo, report, routes, site, sites, state, takeReward, tap, drag } from "./helpers";
+import { advance, drag, frame, isPhone, lay, links, open, playTo, routes, site, sites, snapshot, state, takeReward, tap } from "./helpers";
 
 // User Story 3: think without time pressure.
 
@@ -39,15 +39,19 @@ test("AC13: while paused every link's cost, capacity, utilization and state is o
   await lay(page, info, 2, 3);
   await lay(page, info, 1, 3);
   await playTo(page, info, 900, { connect: false });
+  // On the map: a cost label per link, a code per site and a NEW tag per new site, always.
+  const labelsFor = (s: { looks: string[]; siteStates: string[] }): number => s.looks.length + s.siteStates.length + s.siteStates.filter((x) => x.endsWith(":new")).length;
   await frame(page);
-  const running = await report(page);
+  const running = await snapshot(page);
+  expect(running.drawn.labels).toBe(labelsFor(running.scene));
   await pause(page, true);
   await frame(page);
-  // On the map: a cost label per link always, and a utilization number per link while paused.
+  // While paused there is also a utilization number per link.
+  const paused = await snapshot(page);
+  expect(paused.drawn.labels).toBe(labelsFor(paused.scene) + paused.scene.looks.length);
   const all = await links(page);
   const shown = await sites(page);
-  expect(running.labels).toBe(all.length + shown.length + shown.filter((s) => s.state === "new").length);
-  expect((await report(page)).labels).toBe(running.labels + all.length);
+  expect(all.length).toBe(3);
 
   // In the inspector: one row per link with its cost, capacity, utilization and state.
   if ((await page.locator("#inspector").isHidden())) await page.locator("#btn-inspector").click();

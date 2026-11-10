@@ -10,7 +10,8 @@ export default defineConfig({
   timeout: 180_000,
   workers: 2,
   reporter: [["list"]],
-  use: { baseURL: `http://127.0.0.1:${PORT}/`, browserName: "chromium" },
+  // A click that cannot happen fails in 15 seconds with its reason, not at the end of the test.
+  use: { baseURL: `http://127.0.0.1:${PORT}/`, browserName: "chromium", actionTimeout: 15_000 },
   webServer: {
     command: `python3 -m http.server ${PORT} --bind 127.0.0.1 --directory dist`,
     url: `http://127.0.0.1:${PORT}/`,

@@ -1,7 +1,9 @@
 // Shared by the end-to-end tests. Everything a test does to the game goes through real
 // input (mouse, touch, keys); the test hook is used to read state and to let time pass.
 
+import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type CDPSession, type Page, type TestInfo } from "@playwright/test";
+import { census } from "./census";
 
 export interface HookState {
   screen: string;
@@ -82,6 +84,8 @@ export const links = (page: Page): Promise<HookLink[]> => page.evaluate(() => wi
 export const scene = (page: Page) => page.evaluate(() => window.__backbone.scene());
 export const report = (page: Page) => page.evaluate(() => window.__backbone.report());
 export const linkLoads = (page: Page) => page.evaluate(() => window.__backbone.linkLoads());
+/** The scene and what the renderer drew for it, read in one go so both are the same frame. */
+export const snapshot = (page: Page) => page.evaluate(() => ({ scene: window.__backbone.scene(), drawn: window.__backbone.report() }));
 export const routes = (page: Page, from: number) => page.evaluate((id) => window.__backbone.routes(id), from);
 
 /** Lets simulated time pass. One animation frame afterwards so the screen is up to date. */
@@ -193,4 +197,64 @@ export async function playTo(page: Page, info: TestInfo, untilStep: number, opti
     await advance(page, Math.min(40, untilStep - s.step));
   }
   throw new Error("playTo did not finish");
+}
+
+export interface CensusResult {
+  project: string;
+  renderer: string;
+  worst: { green: number; red: number };
+  shots: { moment: string; green: number; red: number; colored: number }[];
+}
+
+/**
+ * Plays a scripted run and takes the color census of a full-page screenshot at five moments
+ * (FR-032b). The numbers are written to test-results/ so they can be reported as they are.
+ */
+export async function censusRun(page: Page, info: TestInfo, query: string): Promise<CensusResult> {
+  await open(page, `autostart=1&seed=stage-1&bot=1${query ? `&${query}` : ""}`);
+  const shots: CensusResult["shots"] = [];
+  const take = async (moment: string): Promise<void> => {
+    await frame(page);
+    const c = census(await page.screenshot());
+    shots.push({ moment, green: c.greenShare, red: c.redShare, colored: c.colored });
+  };
+  await advance(page, 1500);
+  await take("early run");
+  // The moment of a fiber cut: the spark and the ripple are on screen.
+  await advance(page, 1480);
+  for (let i = 0; i < 500 && !(await links(page)).some((l) => l.look === "cut"); i++) await advance(page, 1);
+  await take("fiber cut");
+  await advance(page, 3600);
+  await take("congested");
+  await page.keyboard.press("Space");
+  await take("paused with the inspector");
+  for (let i = 0; i < 200 && !(await state(page)).over; i++) await advance(page, 200);
+  await take("game over");
+  const renderer = (await state(page)).renderer;
+  const result: CensusResult = {
+    project: info.project.name,
+    renderer,
+    worst: { green: Math.max(...shots.map((s) => s.green)), red: Math.max(...shots.map((s) => s.red)) },
+    shots,
+  };
+  mkdirSync("test-results", { recursive: true });
+  writeFileSync(`test-results/census-${info.project.name}-${renderer}.json`, JSON.stringify(result, null, 2));
+  info.annotations.push({ type: "census", description: `${renderer}: worst green ${(result.worst.green * 100).toFixed(4)}%, worst red ${(result.worst.red * 100).toFixed(4)}%` });
+  return result;
+}
+
+/**
+ * Lets a run play out to game over, taking fiber whenever a reward is offered. The reward
+ * button is pressed only while its dialog is on screen: the game may already have taken the
+ * choice by the time the test looks again.
+ */
+export async function toGameOver(page: Page): Promise<void> {
+  for (let i = 0; i < 600 && !(await state(page)).over; i++) {
+    if ((await state(page)).rewardPending && (await page.locator("#reward").isVisible())) {
+      await page.locator("#reward-fiber").click({ timeout: 3000 }).catch(() => undefined);
+    } else {
+      await advance(page, 200);
+    }
+  }
+  expect((await state(page)).over).toBe(true);
 }

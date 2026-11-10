@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { advance, frame, lay, links, linkLoads, messages, open, playTo, report, routes, scene, sites, state, tap } from "./helpers";
+import { advance, frame, lay, links, linkLoads, messages, open, playTo, report, routes, sites, snapshot, state, tap } from "./helpers";
 
 // User Story 2: operate under load and failure.
 
@@ -31,6 +31,9 @@ test("AC10: a site with no path is shown dark and its traffic is counted as no-r
   expect((await sites(page)).filter((s) => s.id !== 3).map((s) => s.state)).toEqual(["active", "active"]);
   const before = await state(page);
   await advance(page, 300);
+  // Stop the clock, so the numbers read from the simulation and from the screen are one moment.
+  await page.locator("#btn-pause").click();
+  await expect.poll(async () => (await state(page)).paused).toBe(true);
   const after = await state(page);
   expect(after.dropped.noRoute).toBeGreaterThan(before.dropped.noRoute);
   expect(after.dropped.queue + after.dropped.cut).toBe(0);
@@ -39,7 +42,7 @@ test("AC10: a site with no path is shown dark and its traffic is counted as no-r
   await expect(page.locator("#hud-meter-text")).toHaveText(`${after.meter} / ${after.meterSize}`);
   // The dark site carries its slashed icon in both the drawing and the inspector's text.
   expect((await report(page)).icons).toBeGreaterThanOrEqual(1);
-  await page.locator("#btn-inspector").click();
+  if (await page.locator("#inspector").isHidden()) await page.locator("#btn-inspector").click();
   await expect(page.locator("#site-list")).toContainText(`${dark.code} · ID 3 · dark, no path`);
 });
 
@@ -56,9 +59,10 @@ test("AC6, AC7, AC9, AC11: a scripted run shows congestion and a cut, counts eve
   expect(cutLink, "a fiber cut happened").toBeDefined();
   expect((await messages(page)).some((m) => /^Fiber cut: [A-Z]{3}–[A-Z]{3}\. Traffic is rerouting\.$/.test(m))).toBe(true);
   // The spark and the ripple are drawn, and the link carries its cut icon.
-  expect((await scene(page)).effects.sort()).toEqual(["ripple", "spark"]);
-  expect((await report(page)).effects).toBe(2);
-  expect((await report(page)).icons).toBeGreaterThanOrEqual(1);
+  const atCut = await snapshot(page);
+  expect(atCut.scene.effects.sort()).toEqual(["ripple", "spark"]);
+  expect(atCut.drawn.effects).toBe(2);
+  expect(atCut.drawn.icons).toBeGreaterThanOrEqual(1);
   // Nothing rides the cut link, and neither end uses the other as its next hop any more.
   expect((await linkLoads(page)).find((l) => l.id === cutLink!.id)!.pairs).toEqual({});
   const viaCut = (await routes(page, cutLink!.a))[cutLink!.b];
@@ -81,15 +85,26 @@ test("AC6, AC7, AC9, AC11: a scripted run shows congestion and a cut, counts eve
     }
     if (!congested && i % 20 === 0) {
       await frame(page);
-      congested = (await links(page)).find((l) => l.look === "congested" || l.look === "dropping");
-      if (congested) {
-        // AC6: a congested link has its warning icon, and the inspector shows its utilization as a number.
-        expect((await report(page)).icons).toBeGreaterThanOrEqual(1);
-        await page.locator("#btn-inspector").click();
-        const row = page.locator("#link-rows tr").filter({ hasText: /congested|dropping packets/ }).first();
-        await expect(row).toBeVisible();
-        await expect(row.locator("td").nth(3)).toHaveText(/^\d+% to [A-Z]{3} · \d+% to [A-Z]{3}$/);
-        await page.locator("#inspector-close").click();
+      if ((await links(page)).some((l) => l.look === "congested" || l.look === "dropping")) {
+        // Stop the clock so that what the map shows and what the inspector says are one moment.
+        await page.locator("#btn-pause").click();
+        await expect.poll(async () => (await state(page)).paused).toBe(true);
+        await frame(page);
+        congested = (await links(page)).find((l) => l.look === "congested" || l.look === "dropping");
+        if (congested) {
+          // AC6: a congested link has its warning icon, and the inspector shows its utilization as a number.
+          expect((await report(page)).icons).toBeGreaterThanOrEqual(1);
+          if (await page.locator("#inspector").isHidden()) await page.locator("#btn-inspector").click();
+          const row = page.locator("#link-rows tr").filter({ hasText: /congested|dropping packets/ }).first();
+          await expect(row).toBeVisible();
+          await expect(row.locator("td").nth(3)).toHaveText(/^\d+% to [A-Z]{3} · \d+% to [A-Z]{3}$/);
+          await expect(row.locator("td").nth(4)).toHaveClass("is-congested");
+        }
+        if (await page.locator("#inspector").isVisible()) await page.locator("#inspector-close").click();
+        await page.locator("#btn-pause").click();
+        await expect.poll(async () => (await state(page)).paused).toBe(false);
+        previous = await state(page);
+        continue;
       }
     }
     previous = now;

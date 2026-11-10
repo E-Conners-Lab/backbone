@@ -20,7 +20,7 @@ export class Camera {
   /** CSS pixels per km at the centre. */
   zoom = 0.2;
   /** Tilt of the map plane, in radians. The top of the map leans away from the viewer. */
-  tilt = (22 * Math.PI) / 180;
+  tilt = (32 * Math.PI) / 180;
   minZoom = 0.02;
   maxZoom = 4;
 

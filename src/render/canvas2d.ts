@@ -7,6 +7,8 @@ import type { DrawReport, Scene, SceneLink } from "./viewmodel";
 
 export interface Renderer {
   readonly name: "2d" | "gl";
+  /** True once the renderer can no longer draw (a lost WebGL context). */
+  readonly failed?: boolean;
   resize(width: number, height: number, dpr: number): void;
   draw(scene: Scene): Pick<DrawReport, "links" | "pulses" | "sites" | "effects">;
 }
@@ -30,6 +32,49 @@ export function linkColor(link: SceneLink, palette: Palette): string {
   // link blends into the green band, and white next to anything keeps that thing's hue.
   if (link.pending === "new") return palette.pulse!;
   return mix(palette.link!, palette.pulse!, Math.min(1, link.load) * 0.7);
+}
+
+/**
+ * The still part of the map: background, land, lakes, grid and coastline. Both renderers
+ * use this one routine; the WebGL renderer draws it into a texture.
+ */
+export function drawBackdrop(ctx: CanvasRenderingContext2D, scene: Scene, p: Palette): void {
+  const path = (points: number[]): void => {
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i += 2) {
+      if (i === 0) ctx.moveTo(points[i]!, points[i + 1]!);
+      else ctx.lineTo(points[i]!, points[i + 1]!);
+    }
+  };
+  ctx.lineJoin = "round";
+  ctx.setLineDash([]);
+  ctx.fillStyle = p.background!;
+  ctx.fillRect(0, 0, scene.width, scene.height);
+  ctx.fillStyle = p.land!;
+  for (const ring of scene.land) {
+    path(ring);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = p.background!;
+  for (const ring of scene.lakes) {
+    path(ring);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.strokeStyle = css(p.grid!, 0.38);
+  ctx.lineWidth = 1;
+  for (const line of scene.grid) {
+    path(line);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = css(p.coast!, 0.75);
+  ctx.lineWidth = 1.2;
+  for (const ring of [...scene.land, ...scene.lakes]) {
+    path(ring);
+    ctx.closePath();
+    ctx.stroke();
+  }
 }
 
 export class Canvas2dRenderer implements Renderer {
@@ -68,35 +113,7 @@ export class Canvas2dRenderer implements Renderer {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.setLineDash([]);
-    ctx.fillStyle = p.background!;
-    ctx.fillRect(0, 0, scene.width, scene.height);
-
-    // Land, lakes, grid, coastline.
-    ctx.fillStyle = p.land!;
-    for (const ring of scene.land) {
-      this.path(ring);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.fillStyle = p.background!;
-    for (const ring of scene.lakes) {
-      this.path(ring);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.strokeStyle = css(p.grid!, 0.38);
-    ctx.lineWidth = 1;
-    for (const line of scene.grid) {
-      this.path(line);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = css(p.coast!, 0.75);
-    ctx.lineWidth = 1.2;
-    for (const ring of [...scene.land, ...scene.lakes]) {
-      this.path(ring);
-      ctx.closePath();
-      ctx.stroke();
-    }
+    drawBackdrop(ctx, scene, p);
 
     // The scanning sweep: a soft band that crosses the map.
     if (scene.sweep !== null) {

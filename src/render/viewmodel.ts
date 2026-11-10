@@ -232,7 +232,7 @@ export function buildScene(world: World | null, view: ViewState): Scene {
       pendingCost: future && future.cost !== link.cost ? future.cost : null,
       tier: link.tier,
       pendingTier: future && future.tier !== link.tier ? future.tier : null,
-      width: (2 + 4.5 * load + (look === "congested" || look === "dropping" ? 1.5 : 0)) * s,
+      width: (2.6 + 5.5 * load + (look === "congested" || look === "dropping" ? 1.5 : 0)) * s,
       glow: 0.35 + 0.65 * load,
       pending,
       focused: view.focusLink === link.id,

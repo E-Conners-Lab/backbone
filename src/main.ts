@@ -10,6 +10,7 @@ import "./ui/styles.css";
 import { loadContent, type Content } from "./content";
 import { Camera } from "./render/camera";
 import { Canvas2dRenderer, type Renderer } from "./render/canvas2d";
+import { GlRenderer } from "./render/gl";
 import { drawOverlay, type OverlayReport } from "./render/overlay";
 import { RIPPLE_MS, buildScene, type DrawReport, type Scene } from "./render/viewmodel";
 import { advanceWithLog } from "./sim/replay";
@@ -68,8 +69,19 @@ function boot(): void {
     return;
   }
   const camera = new Camera();
-  const renderer: Renderer = new Canvas2dRenderer(el<HTMLCanvasElement>("map"), palette);
+  let mapCanvas = el<HTMLCanvasElement>("map");
+  /** The fallback renderer on a fresh canvas: a canvas that has given out a WebGL context cannot give a 2D one. */
+  const fallbackRenderer = (): Renderer => {
+    const fresh = mapCanvas.cloneNode(false) as HTMLCanvasElement;
+    mapCanvas.replaceWith(fresh);
+    mapCanvas = fresh;
+    return new Canvas2dRenderer(fresh, palette);
+  };
+  // WebGL2 when the browser has it; otherwise, or when asked, the Canvas 2D renderer (AC20).
+  let renderer: Renderer = (switches.renderer !== "2d" ? GlRenderer.create(mapCanvas, palette) : null) ?? fallbackRenderer();
   if (!switches.hud) app.dataset.hud = "off";
+  // The hero art is a frame of the game itself (tools/make-card.mjs).
+  el("hero").style.backgroundImage = 'url("hero.webp")';
 
   let screen: Screen = "welcome";
   let game: Game | null = null;
@@ -397,9 +409,21 @@ function boot(): void {
 
   let last = 0;
   let lastUi = 0;
+  const work: number[] = [];
+  const gaps: number[] = [];
   const frame = (nowMs: number): void => {
+    const began = performance.now();
     const elapsed = last === 0 ? 0 : nowMs - last;
     last = nowMs;
+    if (elapsed > 0) {
+      gaps.push(elapsed);
+      if (gaps.length > 240) gaps.shift();
+    }
+    if (renderer.failed) {
+      // The WebGL context was lost. Carry on in the fallback renderer.
+      renderer = fallbackRenderer();
+      resize();
+    }
     if (screen === "run" && game) game.tick(elapsed);
     if (screen === "over" && game && lapse?.playing) {
       const stride = Math.max(1, Math.ceil(lapse.total / (60 * 8)));
@@ -411,6 +435,8 @@ function boot(): void {
       lastUi = nowMs;
       refreshUi();
     }
+    work.push(performance.now() - began);
+    if (work.length > 240) work.shift();
     window.requestAnimationFrame(frame);
   };
 
@@ -480,6 +506,21 @@ function boot(): void {
         }),
       routes: (from: number) => (game ? (game.world.routes[from] ?? {}) : {}),
       report: () => ({ ...report }),
+      /** Milliseconds of work per frame over the last frames: simulation, drawing and page updates. */
+      frameWork: () => {
+        const sorted = [...work].sort((a, b) => a - b);
+        const at = (q: number): number => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0;
+        const gap = [...gaps].sort((a, b) => a - b);
+        return {
+          frames: sorted.length,
+          mean: sorted.reduce((n, v) => n + v, 0) / Math.max(1, sorted.length),
+          p95: at(0.95),
+          worst: sorted.at(-1) ?? 0,
+          /** Time from one frame to the next: 16.7 ms is 60 frames per second. */
+          gapMean: gap.reduce((n, v) => n + v, 0) / Math.max(1, gap.length),
+          gapP95: gap[Math.min(gap.length - 1, Math.floor(gap.length * 0.95))] ?? 0,
+        };
+      },
       advance: (steps: number) => {
         game?.advance(Math.max(0, Math.min(100_000, Math.floor(steps))));
         refreshUi();
