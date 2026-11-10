@@ -10,9 +10,9 @@ A project from **NAF AC6 — Loop Engineering, Spec-Driven Development & the Fut
 
 | Project | Details |
 | --- | --- |
-| Status | **Playable v1, rebuilt through Spec Kit.** Verified by automated tests in Chromium. Not yet played by a person, on a desktop or on a phone. |
+| Status | **Playable v1, rebuilt through Spec Kit.** Verified by automated tests in Chromium. The owner says he has played and tested it: in a web browser for about 6 or 7 minutes, and on an iPhone 17 Pro, where he says it feels smooth (his report, 2026-11-10; not observed, timed or measured by the build). |
 | Networking topic | OSPF shortest path by cost, equal-cost next hops, reconvergence after a failure (RFC 2328) |
-| Typical session | The scripted player's runs last 6¼ to 7¼ minutes on eight seeds. How long a person's run lasts has not been measured. |
+| Typical session | The scripted player's runs last 6¼ to 7¼ minutes on eight seeds. The owner reports playing for about 6 or 7 minutes; that was not timed. |
 | Live demo | Not published |
 | Built by | Elliot Conner with Claude Code |
 
@@ -128,7 +128,7 @@ The project follows the workshop's Spec Kit workflow: **constitution → specify
 
 ## Verification
 
-**Last checked:** 2026-11-10, macOS 26.7.1 (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. The game's code is as of commit `9b813ab` on branch `speckit-rebuild`. Later commits change records, the videos, the card image and the tool that makes it (`tools/make-card.mjs`), and remove one unused development tool and one unlinked picture; no game code changed (`src/` is as of `9b813ab`). After the card image was replaced, the unit tests, `verify:dist` and the end-to-end tests that load the welcome screen were run again.
+**Last checked:** 2026-11-10, macOS 26.7.1 (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. The game's code is as of commit `9b813ab` on branch `speckit-rebuild`. Later commits change records (among them the spec's `research.md` and `tasks.md`) and the tool that builds the build book (`tools/build_runbook.py`), the videos, the card image and the tool that makes it (`tools/make-card.mjs`), and a comment in `tools/serve-dist.mjs`; they also remove one unused development tool and one unlinked picture. No game code changed (`src/` is as of `9b813ab`). After the card image was replaced, the unit tests, `verify:dist` and the end-to-end tests that load the welcome screen were run again.
 
 ```sh
 npm test               # unit tests (Vitest)
@@ -161,16 +161,19 @@ node tools/confirm-runtime.mjs   # run the game once as ARCADE.md's Runtime sect
 | Code review of the source, tools and tests | Done | Three rounds of `/code-review` at level high: 30 findings, 27 fixed, 3 left with their reasons. Each fix that could have a test has one that fails without it. The third round's fixes were tested but not reviewed again. The reviewers were other sessions of the same model, not people. `docs/verification/results.md` |
 | `dist/` matches the source | Pass | `npm run verify:dist`: 13 files equal a fresh build, in the working folder and in a fresh clone |
 | Seeded-run videos at both sizes | Pass | `docs/verification/run-stage-1-844x390.mp4`, `run-stage-1-1920x1080.mp4`: the scripted player on seed `stage-1`, 7,302 delivered in 6:51 in both, equal to the same run in Node with no browser. Not a person's run. |
-| Fresh copy: serve `dist/`, install, test, build, end-to-end | Pass | From a clone of this branch in an empty folder: `dist/` served as it is, then `npm ci`, 124 unit tests, the build, `verify:dist` and 74 end-to-end tests. Run by the build agent on the build machine, not by another engineer. |
+| Fresh copy: serve `dist/`, install, test, build, end-to-end | Pass | From a clone of this branch in an empty folder: `dist/` served as it is, then `npm ci`, 124 unit tests, the build, `verify:dist` and 74 end-to-end tests. Run by the build agent on the build machine, not by another engineer. Repeated on 2026-11-10 on the merged `main` (`6a82d27`), cloned from GitHub with no login: every step passes, and the runtime check holds 8 of 8. |
 | `ARCADE.md` Runtime section | Confirmed | `node tools/confirm-runtime.mjs` runs the file's own start command, opens the URL with no test switches, plays a run to game over offline and reloads: 8 of 8 claims hold |
 | Frame time | Recorded, not a pass | Headless Chromium on the build machine, where WebGL runs in software: 36 frames a second at 1920×1080 with WebGL, 60 with the fallback and at phone size. Main-thread work is under 1 ms a frame. This is not a phone measurement. |
-| Played by a person; a tester explains a bad cost change from the screen alone | **Not run** | Needs a person (SC-011, SC-013) |
-| 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone (SC-012) |
-| Screen readers; browsers other than Chromium; a real phone | **Not run** | |
+| Played by a person | Owner's report | The owner said on 2026-11-10: "I did play it and test it", in a web browser (which one was not said), and later that he was playing on an iPhone 17 Pro. The build did not observe it. |
+| A person's run lasts 5 to 10 minutes | Owner's report, not timed | He played for "about 6 or 7 minutes" (SC-013). An estimate; whether it was one run from Start to game over was not said. |
+| A tester explains a bad cost change from the screen alone | **Not run** | SC-011 needs a record of what the tester said |
+| 60 frames a second on a mid-range phone | **Not run** | SC-012 asks for a measured frame rate on a mid-range phone. The owner says the game "feels smooth" on an iPhone 17 Pro; that is a high-end phone and an impression, not a measurement. |
+| A real phone | Owner's report | An iPhone 17 Pro (2026-11-10); the browser on it was not said. Not checked by the build. |
+| Screen readers; browsers other than Chromium | **Not run** | By the build. Which browsers the owner used was not said. |
 
 ## Known limitations and next steps
 
-- **No person has played the rebuilt game yet.** Run length for people and the feel of the controls are unmeasured.
+- **Play by a person rests on the owner's report, not on a recorded test.** He said on 2026-11-10 that he played and tested the rebuilt game in a web browser for about 6 or 7 minutes, and then that it feels smooth on an iPhone 17 Pro. Nothing was timed or measured; frame rate on a mid-range phone and the tester evidence of SC-011 are open.
 - **Chromium only.** Other browsers are not verified.
 - **It looks plainer than the approved mock.** Site rings are white, not the mock's cyan, because cyan beside an amber link blends into the green band. The mock's reward countdown and cut countdown are not on the map; the inspector shows a cut's repair time.
 - **Labels can overlap** where links are short or sites are close together, most of all at phone size.
