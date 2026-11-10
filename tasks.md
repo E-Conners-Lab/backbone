@@ -46,6 +46,6 @@ Status is what was actually done and checked on 2026-11-09. Evidence is in the R
 | 6.4 | FRR comparison of the spec cases | D4 | Done: 13 of 13 routes match on the third attempt |
 | 6.5 | README, `ARCADE.md` (consent left false), provenance, build book | C7 | Done |
 | 6.6 | Code review of the build | Owner's standing rule | Done: 10 findings, all fixed |
-| 6.7 | Create the GitHub repo, commit, push | D2 | **Not done.** Waiting for the owner to ask. |
+| 6.7 | Create the GitHub repo, commit, push | D2 | Done: https://github.com/E-Conners-Lab/backbone, public, five commits on `main` |
 
 Later releases (v1.1 to v1.4) are listed in the specification and have no tasks yet.

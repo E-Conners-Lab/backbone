@@ -22,6 +22,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T00:40Z | FRR comparison passes on the third attempt |
 | 2026-11-10T00:44Z | Code review findings fixed |
 | 2026-11-10T00:48:08Z | Milestone 3: v1 built, all checks rerun, videos re-recorded, records updated |
+| 2026-11-10T01:03Z | Owner gave creator details and chose a public repo; five commits pushed to `E-Conners-Lab/backbone` |
+| 2026-11-10T01:05Z | Milestone 4: fresh clone of the public repo passes every check |
 
 ## Steps and results
 
@@ -51,12 +53,16 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 22 | Rerun everything; re-record videos | 33 unit and 9 end-to-end tests pass; `dist/` matches a fresh build |
 | 23 | Write README, `ARCADE.md` (consent false), `tasks.md`, `LICENSE`; update provenance and this log | Done |
 | 24 | Open the game for the owner | Done |
-| 25 | Create the GitHub repo, commit, push | **Not done.** Waiting for the owner to ask. |
+| 25 | Secret scan before publishing: file search and gitleaks | Nothing found |
+| 26 | Create the public GitHub repo, commit, push | Done: https://github.com/E-Conners-Lab/backbone, five commits on `main` |
+| 27 | Fresh clone: serve `dist/`, then install, unit tests, build, dist check, end-to-end tests | All passed at commit `39a62da` |
+| 28 | Owner plays it on a phone | **Not done.** The owner will do this later. |
 
 ## Gotchas
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| The game was first opened on port 8000 and showed someone else's 404 page | Another local service already uses port 8000 on this machine | Served the game on port 8765 instead |
 | The workshop repo was not on the machine | It had not been cloned | Asked the owner; cloned read-only outside the project |
 | The StarterKit templates assume a quiz | Written for a 60-minute quiz-style game | Kept the seven principles; listed each adaptation in the constitution |
 | Mock text rendered in italics | The `ui-monospace` font stack resolved to an italic face in headless Chrome | Named Menlo first in the mock; the game self-hosts IBM Plex |
@@ -78,13 +84,15 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Can I see it running? | Owner | Not the game at that point; the mock was given motion |
 | Is the mock approved? Which typeface? | Agent | Owner: approved, start the build. No typeface named, so the proposed IBM Plex was used. |
 | Open the game when done | Owner | Done |
-| `ARCADE.md` creator fields and consent | Agent | **Open.** Only the owner can fill these. |
-| Three secure-build exceptions (no secret scanner, no CI scan, no signing or SBOM) | Agent | **Open.** Need the owner's acceptance. |
+| `ARCADE.md` creator fields | Agent | Owner: GitHub `E-Conners-Lab`, no location, not a first spec-driven project. Display name taken from the git author; owner to confirm. |
+| Create the repo and commit? | Agent | Owner: public repo, commit, push |
+| `consent_to_publish` | Agent | **Open.** Still `false`; only the owner sets it. |
+| Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. **Open** until the owner accepts them. |
 
 ## Open items
 
-- Owner fills the creator fields in `ARCADE.md` and decides on `consent_to_publish`.
-- Owner decides when to create the GitHub repo and commit. `ARCADE.md` `repo` is empty until then.
+- Owner decides on `consent_to_publish` in `ARCADE.md` and confirms the display name.
+- Owner accepts or rejects the three secure-build exceptions.
 - Frame rate on a real mid-range phone has not been measured.
 - Nobody has played it by hand. Run length for people is unknown.
 - In FRR attempt 2, two routers reported unexpected router IDs while being probed. The cause was not found. Later runs verify router IDs before comparing.

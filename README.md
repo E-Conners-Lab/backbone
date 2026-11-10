@@ -10,7 +10,7 @@ A project from **NAF AC6 — Loop Engineering, Spec-Driven Development & the Fut
 
 | Project | Details |
 | --- | --- |
-| Status | **Playable v1, verified by automated tests.** Not yet played by a person on a real phone. Not published. |
+| Status | **Playable v1, verified by automated tests.** Not yet played by a person on a real phone. Not listed in the Arcade. |
 | Networking topic | OSPF shortest path by cost, equal-cost next hops, reconvergence after a failure (RFC 2328) |
 | Typical session | The scripted player lasts 3 to 6½ minutes. How long a human run lasts has not been measured. |
 | Live demo | Not published |
@@ -100,7 +100,7 @@ Spec first, in the workshop StarterKit shape, with the owner approving the spec 
 
 ## Verification
 
-**Last checked:** 2026-11-09, macOS (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. Nothing is committed, so there is no commit identifier.
+**Last checked:** 2026-11-09, macOS (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. Checked at commit `39a62da`.
 
 ```sh
 npm test               # 33 unit tests (Vitest)
@@ -131,7 +131,8 @@ npm run verify:dist    # dist/ equals a fresh build
 | 60 frames per second on a mid-range phone | **Not run** | Headless Chromium on a Mac held about 16.7 ms per frame, which says nothing about a phone |
 | Played by a person; screen reader; real phone or tablet; Safari and Firefox | **Not run** | Only Chromium was tested |
 | Briefing and model notes reviewed by a second person against the RFC | **Not run** | Written by the build agent from the sections it read |
-| Fresh-clone run | **Not run** | Nothing is committed yet |
+| Fresh-clone run | Pass | Cloned the public repo at `39a62da` into an empty folder: `dist/` served and loaded with every asset; `npm ci`, 33 unit tests, build, `verify:dist` and 9 end-to-end tests all passed from the clone |
+| Secret scan before the first push | Pass | gitleaks 8.30.1 over the project folder: no leaks found |
 
 ## Known limitations and next steps
 

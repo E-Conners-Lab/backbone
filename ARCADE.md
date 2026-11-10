@@ -15,7 +15,7 @@ game:
   levels: 1                  # one region, endless mode
   card_image: public/hero.webp
   card_image_alt: "A dark map of North America with glowing fiber links between cities, one link amber with congestion and one cut link in magenta."
-  repo: ""                   # no GitHub repository exists yet; the owner fills this in after creating it
+  repo: "https://github.com/E-Conners-Lab/backbone"
   repo_path: ""
   license: Apache-2.0
 
@@ -31,7 +31,7 @@ creator:                     # (HUMAN) filled in from the owner's answers on 202
 
 build:
   started: unknown           # not recorded; the first timestamp captured was 2026-11-09T22:52:04Z, after the first fetches
-  finished: "2026-11-10T00:48:08Z"
+  finished: "2026-11-10T01:06:00Z"
   wall_time: unknown         # start was not recorded and the session included waits for the owner
   spec_driven:
     framework: custom        # constitution, specification and plan hand-written in the NAF AC6 StarterKit shape
@@ -46,8 +46,8 @@ build:
   mcp_servers: ["None was called. Connected but unused: claude-in-chrome, MCP_DOCKER, claude.ai Claude Docs, claude.ai Gmail / Google Calendar / Google Drive (auth stubs), ide, pycharm, itential-docs, nautobot-ashburn, nautobot-charlotte, netbox_mcp"]
   rag_and_sources: ["RFC 2328 (OSPF Version 2) text from rfc-editor.org, sections 16.1, 16.1.1, 16.8, 13.2, 9.2, A.4.2, C.3", "RFC 2991 sections 1-4", "Arcade ARCADE.md template", "NAF_AC6 workshop repo at commit b77da71: StarterKit README, CONSTITUTION, SPEC, PLAN, ARCADE; lab guide; Per-Hop Works ARCADE.md", "Natural Earth 1:50m land and lakes (map data)", "FRR 10.7.1 as a reference OSPF implementation"]
   skills_and_plugins: ["project-initiation-standard (owner's skill)", "secure-build-standard (owner's skill)", "code-review (Claude Code skill)", "Owner's Claude Code hooks: ruff on Python edits, disk warning, code-review gate"]
-  other_tools: ["TypeScript 7.0.2", "Vite 8.3.7", "Vitest 5.1.0", "Playwright 1.65.0 with Chromium headless shell 158.0.8127.18", "Node v26.3.1", "Google Chrome 157 headless (mock screenshots)", "Docker 29.9.1", "ffmpeg 8.0.1", "cwebp 1.6.0", "ruff", "curl", "git", "gh"]
-  human_prompts: 5
+  other_tools: ["TypeScript 7.0.2", "Vite 8.3.7", "Vitest 5.1.0", "Playwright 1.65.0 with Chromium headless shell 158.0.8127.18", "Node v26.3.1", "Google Chrome 157 headless (mock screenshots)", "Docker 29.9.1", "ffmpeg 8.0.1", "cwebp 1.6.0", "ruff", "gitleaks 8.30.1", "curl", "git", "gh"]
+  human_prompts: 6
   usage:
     input_tokens: unknown
     output_tokens: unknown

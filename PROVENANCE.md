@@ -14,9 +14,9 @@ Times are UTC. No tokens or costs are estimated anywhere in this file.
 | Sub-agents | One forked `code-review` run at level `medium` over `src`, `tools`, `tests` | Skill result: 12 tool uses, about 4.5 minutes |
 | OS | macOS, Darwin 25.6.0, arm64 | Session environment |
 | Session start | unknown | The first timestamp captured was 2026-11-09T22:52:04Z, after the first fetches |
-| Last recorded step | 2026-11-10T00:48:08Z | `date -u` at the final check |
+| Last recorded step | 2026-11-10T01:06Z | `date -u` after the fresh-clone check |
 | Wall time | unknown | Start not recorded; the session included waits for the owner |
-| Human prompts | 5, plus 1 multiple-choice answer | Counted from the session: the brief; "approved, go with the defaults"; "can I see it running?"; "approved, start the build"; "open the game when you're done" |
+| Human prompts | 6, plus 2 sets of multiple-choice answers | Counted from the session: the brief; "approved, go with the defaults"; "can I see it running?"; "approved, start the build"; "open the game when you're done"; the creator details for `ARCADE.md` |
 | Token usage / cost | unknown | Not measured by the agent |
 
 ## Build tools and versions
@@ -118,8 +118,11 @@ Downloaded as plain text from `https://www.rfc-editor.org/rfc/rfcNNNN.txt` with 
 | 21 | 2026-11-10 | `code-review` at level `medium` | 10 findings, all confirmed and fixed: stale inspector names after a new seed; a cut cancelled by removing and re-laying the link; no drawing if WebGL setup fails part-way; stale utilization on a cut link (also misleading the bot); `--keep` name collision in the FRR script; double commit of a cost on Enter; focus lost when opening About; a finished run's links drawn on the welcome screen; a missing palette script; regex parsing in the FRR script. Tests were added for the first, second, fourth and sixth. |
 | 22 | 2026-11-10T00:46Z | Seeded-run videos recorded with the final build: seed `stage-1`, scripted player, simulation at 4× | Both sizes: 4,281 delivered, 5:04, 132 dropped, no page errors. Identical to the same seed run in Node. Two frames viewed. |
 | 23 | 2026-11-10T00:48Z | Final run of everything | `npm test`: 33 passed. `npm run test:e2e`: 9 passed, 1 skipped. `npm run verify:dist`: `dist/` matches a fresh build (14 files). `tsc --noEmit`: clean. |
+| 24 | 2026-11-10T01:02Z | Before the first push: searched every file to be committed for machine paths, email addresses and key-like strings; ran gitleaks 8.30.1 over the folder | Nothing found; "no leaks found" |
+| 25 | 2026-11-10T01:03Z | Five commits on `main`; `gh repo create E-Conners-Lab/backbone --public --push`; read the repo back with `gh repo view` | Public, default branch `main`, local branch tracking `origin/main` |
+| 26 | 2026-11-10T01:05Z | Fresh clone of the public repo at `39a62da` into an empty folder | `dist/` served: page title and all three referenced assets returned 200. From the clone: `npm ci`, 33 unit tests, build, `verify:dist` (14 files match) and 9 end-to-end tests passed. |
 
-**Not verified:** frame rate on a real mid-range phone; play by a person; any browser other than Chromium; screen readers; the portrait phone layout; a fresh-clone run (nothing is committed); how long a human run lasts.
+**Not verified:** frame rate on a real mid-range phone; play by a person; any browser other than Chromium; screen readers; the portrait phone layout; how long a human run lasts.
 
 ## Changes of direction by the owner
 
@@ -130,11 +133,13 @@ Downloaded as plain text from `https://www.rfc-editor.org/rfc/rfcNNNN.txt` with 
 | 2026-11-09 | Asked "can I see it running?" before approving the mock. The game did not exist, so motion was added to the mock. |
 | 2026-11-09 | Approved the mock and told the agent to start the build. |
 | 2026-11-10 | Asked for the game to be opened when the build finished. |
+| 2026-11-10 | Gave the creator details: GitHub account `E-Conners-Lab`, no location, not a first spec-driven project. Chose a public repo, commit and push. Asked whether the three open secure-build items are necessary for this project; that question is answered in `docs/secure-build-checklist.md` and the exceptions remain his to accept. |
 
 ## Decisions the agent made without asking
 
 | Decision | Why |
 | --- | --- |
+| `creator.name` in `ARCADE.md` set to "Elliot Conner" | Taken from the git author name; the owner gave the GitHub account but did not state a display name. Flagged for him to change. |
 | IBM Plex Sans and Mono as the typeface | Proposed twice as the default if the owner did not object; the owner approved without objecting |
 | Removed "mute control" from v1 | The owner accepted sound in v1.1; recorded as a spec amendment |
 | A cut link cannot be removed | Closes an exploit found in review; recorded as a spec amendment |

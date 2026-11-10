@@ -26,8 +26,10 @@ Backbone is a static browser game. It has no backend, no accounts, no network ca
 
 These need the owner's acceptance; the agent cannot accept risk on the owner's behalf.
 
+**The owner asked on 2026-11-09 whether these are necessary for this project.** The agent's answer: no. The game ships no secrets, no backend and no runtime dependencies, so the three rules protect very little here. The one cheap step worth doing was a secret scan before the code went public, and that was done: gitleaks 8.30.1 found no leaks before the first push. A CI workflow that runs the tests and `npm audit` on each push would be a reasonable later addition if the repo gets contributors. Signing and an SBOM are not worth it for a static workshop example.
+
 | Rule ID | Reason | Risk Accepted By | Expiry |
 | --- | --- | --- | --- |
-| SEC-06 | No pre-commit secret scanner. The project has no secrets and nothing is committed yet. Add gitleaks before the first push if wanted. | pending owner | — |
+| SEC-06 | No pre-commit secret scanner hook. A one-off gitleaks scan was run before the first push and found nothing. | pending owner | — |
 | SEC-26 | No CI, so dependency scanning is manual (`npm audit`). | pending owner | — |
 | SEC-28, SEC-29 | No artifact signing or SBOM for a static workshop example. `package-lock.json` lists every build dependency. | pending owner | — |
