@@ -24,6 +24,11 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T00:48:08Z | Milestone 3: v1 built, all checks rerun, videos re-recorded, records updated |
 | 2026-11-10T01:03Z | Owner gave creator details and chose a public repo; five commits pushed to `E-Conners-Lab/backbone` |
 | 2026-11-10T01:05Z | Milestone 4: fresh clone of the public repo passes every check |
+| 2026-11-10, about 01:00–02:30 | Showcase player and captioned run recorder written, scored headlessly against the bot on 20 seeds, rehearsed headlessly |
+| 2026-11-10T02:16Z | First visible showcase run crashed at the start (see gotchas); fixed and reopened at 02:28Z |
+| 2026-11-10T02:39Z | Owner stopped the visible run at game clock 6:04. No finished showcase video exists. |
+| 2026-11-10, time not recorded | Owner played the game by hand, gave consent to publish and confirmed the name Backbone |
+| 2026-11-10T03:08Z | Milestone 5: owner accepted the three secure-build exceptions with no expiry and confirmed the creator name. No owner decision is left open for the Arcade submission. |
 
 ## Steps and results
 
@@ -57,6 +62,11 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 26 | Create the public GitHub repo, commit, push | Done: https://github.com/E-Conners-Lab/backbone, five commits on `main` |
 | 27 | Fresh clone: serve `dist/`, then install, unit tests, build, dist check, end-to-end tests | All passed at commit `39a62da` |
 | 28 | Owner plays it on a phone | **Not done.** The owner will do this later. |
+| 29 | Showcase player (`tools/showcase/player.ts`): forecasts load on a copy of the simulation before each change | Beats or ties the bot on 18 of 20 seeds in headless scoring; loses by seconds on `loop` and `arcade`. 2 new unit tests; 35 pass. |
+| 30 | Showcase recorder (`tools/showcase/record.mjs`): plays through real mouse and keyboard input with captions | Headless dry runs clean: 81 inputs, 0 fallbacks, 0 skipped over 5 game minutes on seed `2328`. A 3x rehearsal reached game minute 12 before it was stopped. |
+| 31 | Visible run for the owner to watch and record, seed `2328` | Second attempt ran cleanly to game clock 6:04, then the owner stopped it. **No run was recorded to game over.** |
+| 32 | Open the game for the owner to play by hand | Done. Owner: "seems to be pretty good". Run length not recorded. |
+| 33 | Record the owner's decisions: consent, name, exceptions, creator name | Done in `ARCADE.md`, README, PID, spec, checklist and provenance |
 
 ## Gotchas
 
@@ -74,6 +84,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | FRR costs all read 1 lower than the spec | The comparison script subtracted an assumed loopback cost; FRR advertises the loopback at metric 0 | Read the metric from FRR's own router-LSA |
 | FRR disagreed with the spec on five routes | One adjacency in the lab never formed, so FRR was routing a different topology | Health gate: no comparison unless all adjacencies are Full and router IDs are right. Native arm64 image instead of an emulated one. |
 | "Three equal paths carry a third each" is a tempting but wrong model | Forwarding is hop by hop | Spec case 7 |
+| Showcase recorder: a keyboard-laid link and typed costs did nothing in headless runs | The "press Enter to begin" hook swallowed every Enter when no person was there to press it | The hook is switched off once the run begins |
+| Showcase recorder: three cost edits on one link fell back to direct commands | With many links, that link's row was scrolled out of view in the inspector, so the click missed | Scroll the row into view before clicking |
+| First visible showcase run crashed after the owner pressed Enter | The agent told the owner to click in the window first; the click reached a game control, the game left the welcome screen, and the recorder waited for a button that was gone | A click shield covers the page while it waits; a missing button is no longer fatal. Checked by an automated click on Start. |
 
 ## Questions and answers
 
@@ -88,12 +101,16 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Create the repo and commit? | Agent | Owner: public repo, commit, push |
 | `consent_to_publish` | Agent | Owner, 2026-11-09, after playing the game: consent given. Set to `true` on his instruction. |
 | Is "Backbone" the final name? | Agent | Owner, 2026-11-09: keep the name Backbone. "Working title" removed from the README, PID and spec. |
-| Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. **Open** until the owner accepts them. |
+| Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. Owner, 2026-11-09: accept all three, no expiry. |
+| Creator display name | Agent | Owner, 2026-11-09: keep "Elliot Conner" |
+| Record a run of the agent playing, showing every scenario | Owner | A scripted player and recorder were built. The owner watched about 6 game minutes live and stopped the run. No finished video. |
+| Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 
 ## Open items
 
-- Owner confirms the creator display name in `ARCADE.md` ("Elliot Conner", taken from the git author). Consent to publish and the game's name are settled.
-- Owner accepts or rejects the three secure-build exceptions.
+- These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
+- `hosted_url` in `ARCADE.md` is empty. Whether the Arcade needs a hosted copy was not checked.
+- No showcase run has been recorded to game over.
 - Frame rate on a real mid-range phone has not been measured.
 - The owner played it by hand on 2026-11-09 ("seems to be pretty good"). How long the run lasted was not recorded, so run length for people is still unknown.
 - In FRR attempt 2, two routers reported unexpected router IDs while being probed. The cause was not found. Later runs verify router IDs before comparing.

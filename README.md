@@ -10,7 +10,7 @@ A project from **NAF AC6 — Loop Engineering, Spec-Driven Development & the Fut
 
 | Project | Details |
 | --- | --- |
-| Status | **Playable v1, verified by automated tests.** Not yet played by a person on a real phone. Not listed in the Arcade. |
+| Status | **Playable v1, verified by automated tests.** Played by the owner on a desktop browser; not yet played on a real phone. Not listed in the Arcade. |
 | Networking topic | OSPF shortest path by cost, equal-cost next hops, reconvergence after a failure (RFC 2328) |
 | Typical session | The scripted player lasts 3 to 6½ minutes. How long a human run lasts has not been measured. |
 | Live demo | Not published |
