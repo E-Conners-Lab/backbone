@@ -144,3 +144,86 @@ Downloaded as plain text from `https://www.rfc-editor.org/rfc/rfcNNNN.txt` with 
 | Removed "mute control" from v1 | The owner accepted sound in v1.1; recorded as a spec amendment |
 | A cut link cannot be removed | Closes an exploit found in review; recorded as a spec amendment |
 | Balance constants changed from the plan's starting values | The plan called them tunable; final values are in the plan |
+
+---
+
+# Spec Kit rebuild
+
+Everything above this line records the hand-built v1 (tag `v1-handbuilt`) and is left as written.
+From here down the file records the rebuild of v1 through Spec Kit on branch `speckit-rebuild`.
+The same rules apply: only what happened, `unknown` where something was not recorded, and no
+estimated tokens or costs. Times are UTC.
+
+## Recorded late
+
+This file was not updated between 2026-11-10T01:06Z and the start of this part. What happened in
+that gap is in `docs/capture-log.md`. The rows below point to it. The session that wrote this part
+did not witness any of it.
+
+| What | Where it is recorded |
+| --- | --- |
+| Showcase player and recorder, the visible run, a code review at level `high` | Capture log steps 29–35 |
+| Owner's decisions: consent to publish, the name Backbone, three secure-build exceptions, creator name | Capture log step 33 and its questions table; `docs/PID.md` amendment 1.2 |
+| Decision to rebuild through Spec Kit, tag `v1-handbuilt`, the clean slate, `specify init` | Capture log steps 38–42; `docs/PID.md` amendment 1.3; commits `bde1e7e` and `e116913` |
+
+## Rebuild environment
+
+| Item | Value | How it was established |
+| --- | --- | --- |
+| Model | `claude-fable-5-2` | Model ID reported to the agent by the harness in this session |
+| Reasoning effort | `xhigh` | The owner's `/effort` command at the start of the session |
+| Harness | Claude Code 2.1.322 | `claude --version`, 2026-11-10T04:14Z |
+| GitHub Spec Kit | 1.2.2, Claude integration, commands installed as skills | `.specify/init-options.json` |
+| OS | macOS, Darwin 25.6.0, arm64 | Session environment |
+| Python | 3.15.0 | `python3 --version`; runs `tools/build_runbook.py` and the constitution check |
+| Session start | unknown | The first timestamp captured was 2026-11-10T04:14Z |
+| Sessions | One. It waited for the owner from about 04:25Z to about 15:05Z on 2026-11-10. | Timestamps in the capture log |
+| Wall time | unknown | Start not recorded; the session includes the wait above |
+| Token usage / cost | unknown | Not measured by the agent |
+| Helper models and sub-agents | None so far | This session's own tool calls |
+| MCP servers | The same servers as listed for v1 are connected. None has been called. | Tool names visible to the agent |
+
+## Human prompts in the rebuild
+
+Counted from the session. The owner's `/model` and `/effort` commands at the start are settings,
+not prompts, and are not counted.
+
+| # | When | Prompt |
+| --- | --- | --- |
+| 1 | 2026-11-10, before 04:14Z | `/speckit-constitution` with the lab's step 1 text |
+| 2 | 2026-11-10, about 04:15Z | Asked whether the project could be finished unattended overnight |
+| 3 | 2026-11-10, about 15:05Z | "go, commit as you go, take your recommendations" |
+
+## Sources read in the rebuild
+
+| Source | How it was obtained | Identifier |
+| --- | --- | --- |
+| `StarterKit/CONSTITUTION.md`, `SPEC.md`, `PLAN.md` | Read in full from this repository | Commit `5fd0490` |
+| Spec Kit templates in `.specify/templates/` (constitution, spec, plan, tasks) | Read in full | Spec Kit 1.2.2 |
+| `docs/PID.md`, `docs/capture-log.md`, this file | Read in full | Commit `5fd0490` |
+| Workshop lab guide, `WORKSHOP/LAB/README.md` in `automateyournetwork/NAF_AC6` | `curl` from raw.githubusercontent.com at commit `b77da71d7c810dbdd678ff09856d9097c7da05ee`, into the session scratch folder | SHA-256 `44d7093e93b27203a46860b008d399bdbf73cd9b5813fe79bc037e9af734a810` |
+| ↳ `WORKSHOP/LAB/StarterKit/README.md` (the README shape) | Same | SHA-256 `8a08d1ac4a97e090dc23efe097d8135b14b6abfabbfb9d29d16629c4b07c9a98` |
+| Tag `v1-handbuilt` (the hand-built source) | Three lookups with `git ls-tree` and `git grep`: where the tuning constants lived, the hue bands in the palette test, and the name of the purity test. **No file was copied.** | Tag `v1-handbuilt` |
+
+## Rebuild steps and checks
+
+| # | When (UTC) | Step | Result |
+| --- | --- | --- | --- |
+| R1 | 2026-11-10T04:18Z | Lab step 1: `/speckit-constitution` with the lab's prompt | `.specify/memory/constitution.md` version 1.0.0. Seven principles and their evidence carried over. Five conflicts flagged for the owner (K1–K5), five Spec Kit defaults held to the stricter reading, six points carried to later steps. |
+| R2 | 2026-11-10T04:18Z | Independent carry-over check: a script compares every line and table cell of the source with the new file | Pass, 50 of 50. A copy with two clauses deleted fails, as it should. |
+| R3 | 2026-11-10T15:09Z | Commit lab step 1 | `431cba3`. Not pushed. |
+| R4 | 2026-11-10T15:11Z | Amend the constitution with the owner's decisions K1 and K2 | Version 1.1.0. Carry-over check passes with the two changes declared. |
+
+## Changes of direction by the owner in the rebuild
+
+| When | What |
+| --- | --- |
+| 2026-11-10, about 15:05Z | Dropped the review between lab steps: "go, commit as you go, take your recommendations". K1–K5 are decided as the agent recommended; see the capture log's questions table. |
+
+## Decisions the agent made without asking in the rebuild
+
+| Decision | Why |
+| --- | --- |
+| Updated `docs/capture-log.md` and `docs/runbook.html` during the constitution command, which says to write only the constitution file | The owner's standing rule is that every step is logged as it happens |
+| Nothing is pushed | The owner said "commit as you go" and did not mention pushing |
+| The rebuild writes its code anew and does not copy from tag `v1-handbuilt` | `docs/PID.md` amendment 1.3 says the rebuild starts from a clean slate |

@@ -19,13 +19,15 @@ every "faithful" claim; a review of all shipped explanatory text against those s
 
 ### C2 · The player learns by shaping, then watching
 
-The player's only actions are the ones that exercise the skill: add a link, change a cost, upgrade
-capacity, and later enable equal-cost sharing. The player never steers a packet. Every value
+The player's only actions are the ones that exercise the skill: add or remove a link, change a
+cost, upgrade capacity, choose a reward, and later enable equal-cost sharing. The player never
+steers a packet. Every value
 needed to reason about a path (cost, capacity, utilization, up/down) is visible on the map or in
 the pause inspector, never hidden behind hover alone. After any change, the game shows where
 traffic moved, so a wrong prediction is visible and explained by the numbers.
 
-Learning sequence: **redundancy → cost tuning → equal-cost sharing → surviving failures**.
+Learning sequence: **redundancy → cost tuning → equal-cost sharing → surviving failures**. This is
+the order of the campaign's regions, planned for v1.3. Endless mode does not enforce it.
 
 **Evidence:** a tester can state, for a deliberately bad cost change, which link heated up and
 why, using only what the game shows.
@@ -139,6 +141,13 @@ adapted to a continuous simulation; each adaptation is listed below.
 | "How we change these rules" | Kept word for word in Governance. Added: precedence, who approves, versioning, compliance review, force of wording. | Spec Kit asks for an amendment procedure, a versioning policy and compliance review. |
 | "each adaptation is listed at the end" | "listed below" | Position in the new structure |
 
+**Amendments**
+
+| Version | Date | Change | Reason |
+| --- | --- | --- | --- |
+| 1.1.0 | 2026-11-10 | C2: "add a link" becomes "add or remove a link", and "choose a reward" joins the player's actions. | The approved spec allows both (Q5, R10, AC17). Decided by the owner (K1 in `docs/capture-log.md`). |
+| 1.1.0 | 2026-11-10 | C2: the learning sequence is stated to be the order of the campaign's regions; endless mode does not enforce it. | v1 ships fiber cuts and defers equal-cost sharing to v1.2. Decided by the owner (K2). |
+
 ## Governance
 
 This constitution governs Backbone from the Spec Kit rebuild on. Where the spec, the plan, the
@@ -173,4 +182,4 @@ PATCH: wording is clarified with no change in meaning. Every amendment updates t
 **Force of wording.** MUST and MUST NOT are absolute. A plain statement about the game in a
 principle, such as "The game is static files", binds with the same force.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-09 | **Last Amended**: 2026-11-09
+**Version**: 1.1.0 | **Ratified**: 2026-11-09 | **Last Amended**: 2026-11-10
