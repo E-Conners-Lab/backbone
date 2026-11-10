@@ -68,6 +68,8 @@ export function forecast(w: World, commands: readonly Command[], seconds = FOREC
       if (i % 4 === 0) { for (const l of f.links) q += queued(l); samples++; }
     }
     drops += totalDropped(f) - before;
+    // A forecast that fills the meter stopped counting early: charge it the whole meter, so losing never looks cheap.
+    if (f.over) drops += f.tuning.meterMax;
     queue += samples > 0 ? q / samples : 0;
   }
   drops /= SALTS.length; queue /= SALTS.length;
@@ -187,7 +189,7 @@ function chooseReward(w: World, mem: PlayerMemory, split: number[][], fixes: { b
   mem.planned = { kind: "upgrade", commands: [{ type: "upgrade", link: l.id }],
     why: `Upgrade ${linkName(w, l)} ${capacityOf(w, l)}→${w.tuning.tiers[l.tier + 1]} pkt/s, at ${pct(linkUtil(w, l))}. Its cost stays ${l.cost}, so routes do not move: only the bottleneck widens.` };
   return { kind: "reward", commands: [{ type: "chooseReward", choice: "upgrade" }],
-    why: `Reward: upgrade. Forecast for the next ${REWARD_SEC} s: upgrading ${linkName(w, l)} leaves ${Math.round(bestUp.o.drops)} drops, against ${Math.round(bestLink?.o.drops ?? base.drops)} for the best use of 3,000 km of fiber.` };
+    why: `Reward: upgrade. Forecast for the next ${REWARD_SEC} s: upgrading ${linkName(w, l)} leaves ${Math.round(bestUp.o.drops)} drops, against ${Math.round(bestLink?.o.drops ?? base.drops)} for the best use of ${km(w.tuning.rewardFiberKm)} of fiber.` };
 }
 
 /** The next move, or null when the network should be left alone. Call about once a second, and whenever a reward is pending. */
@@ -285,8 +287,13 @@ export function decide(w: World, mem: PlayerMemory): Move | null {
     }
     // Only act on a clear improvement: the forecast is an estimate, and every change moves routes.
     if (!best || best.o.value > current.value * 0.8 - 0.3) break;
+    if (best.c.type === "setCost") {
+      const link = best.c.link;
+      const earlier = commands.findIndex(c => c.type === "setCost" && c.link === link);
+      if (earlier >= 0) { commands.splice(earlier, 1); notes.splice(earlier, 1); }   // a second change to one link replaces the first
+      costs.set(link, best.c.cost);
+    }
     commands.push(best.c); notes.push(best.note); current = best.o;
-    if (best.c.type === "setCost") costs.set(best.c.link, best.c.cost);
   }
   if (commands.length === 0) return null;
   mem.lastRetuneStep = w.step;

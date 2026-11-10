@@ -103,7 +103,7 @@ Spec first, in the workshop StarterKit shape, with the owner approving the spec 
 **Last checked:** 2026-11-09, macOS (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. Checked at commit `39a62da`.
 
 ```sh
-npm test               # 33 unit tests (Vitest)
+npm test               # 35 unit tests (Vitest)
 npm run build          # must come before the end-to-end tests: they run against dist/
 npm run test:e2e       # 9 end-to-end tests (Playwright), 1 more skipped by design
 npm run verify:dist    # dist/ equals a fresh build

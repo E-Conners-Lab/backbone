@@ -25,9 +25,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T01:03Z | Owner gave creator details and chose a public repo; five commits pushed to `E-Conners-Lab/backbone` |
 | 2026-11-10T01:05Z | Milestone 4: fresh clone of the public repo passes every check |
 | 2026-11-10, about 01:00–02:30 | Showcase player and captioned run recorder written, scored headlessly against the bot on 20 seeds, rehearsed headlessly |
-| 2026-11-10T02:16Z | First visible showcase run crashed at the start (see gotchas); fixed and reopened at 02:28Z |
+| 2026-11-10T02:16Z | First visible showcase run crashed at the start (see gotchas); fixed and reopened 12 minutes later |
 | 2026-11-10T02:39Z | Owner stopped the visible run at game clock 6:04. No finished showcase video exists. |
-| 2026-11-10, time not recorded | Owner played the game by hand, gave consent to publish and confirmed the name Backbone |
+| 2026-11-10, about 02:45 | Owner played the game by hand, gave consent to publish and confirmed the name Backbone |
 | 2026-11-10T03:08Z | Milestone 5: owner accepted the three secure-build exceptions with no expiry and confirmed the creator name. No owner decision is left open for the Arcade submission. |
 
 ## Steps and results
@@ -67,6 +67,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 31 | Visible run for the owner to watch and record, seed `2328` | Second attempt ran cleanly to game clock 6:04, then the owner stopped it. **No run was recorded to game over.** |
 | 32 | Open the game for the owner to play by hand | Done. Owner: "seems to be pretty good". Run length not recorded. |
 | 33 | Record the owner's decisions: consent, name, exceptions, creator name | Done in `ARCADE.md`, README, PID, spec, checklist and provenance |
+| 34 | Spec-driven development map: `docs/spec-map.html` and `docs/spec-map.png` | Done; checked at desktop and phone widths |
+| 35 | Code review of the branch at level `high` | 10 findings. Fixed: forecast scoring at game over, recorder keeps its video when a run stops early, demos counted only when shown, stale snapshot after a cut, runbook times, test counts, two hard-coded values. Left, with reasons given to the owner: shared input helpers, retune search cost, small duplicated helpers. |
 
 ## Gotchas
 
@@ -104,12 +106,13 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. Owner, 2026-11-09: accept all three, no expiry. |
 | Creator display name | Agent | Owner, 2026-11-09: keep "Elliot Conner" |
 | Record a run of the agent playing, showing every scenario | Owner | A scripted player and recorder were built. The owner watched about 6 game minutes live and stopped the run. No finished video. |
+| Does the Arcade need a hosted URL? | Owner | No. The template describes `hosted_url` as "public URL if it is deployed (GitHub Pages etc), else" blank, and the Arcade page asks only for a public repo URL with the consent box ticked. The Per-Hop Works example has a "Play now" link on the Arcade's own site; how that copy is produced was not verified. Checked 2026-11-09 from the template, the Arcade page and the example page. |
 | Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 
 ## Open items
 
 - These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
-- `hosted_url` in `ARCADE.md` is empty. Whether the Arcade needs a hosted copy was not checked.
+- The owner's rules say only the owner sets `consent_to_publish`; the agent set it on his spoken instruction. Recorded as PID amendment 1.2 for him to confirm or redo.
 - No showcase run has been recorded to game over.
 - Frame rate on a real mid-range phone has not been measured.
 - The owner played it by hand on 2026-11-09 ("seems to be pretty good"). How long the run lasted was not recorded, so run length for people is still unknown.

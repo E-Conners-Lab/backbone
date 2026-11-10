@@ -335,6 +335,12 @@ async function perform(c, how = {}) {
   return "skipped";
 }
 
+// A run can end early: the window is closed, the process is asked to stop, or an input times out.
+// Whatever happens, what was recorded so far is still converted and written out below.
+let stopReason = "over", runError = null, lastKnown = null, stopRequested = false;
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { stopRequested = true; });
+
+try {
 // ---------- the opening ----------
 await page.goto(base);
 await page.waitForFunction(() => window.__backbone && window.__showcase);
@@ -377,7 +383,7 @@ const TONES = { rescue: "fail", reclaim: "warn", retune: "warn" };
 const mem = player.newMemory();
 const demo = { inspector: false, refused: false, cutRemove: false, keyboard: false, zoom: false };
 const name = (w, l) => `${sim.siteById(w, l.a)?.code}–${sim.siteById(w, l.b)?.code}`;
-let lastDecideStep = -1e9, prevUp = new Map(), stopReason = "over";
+let lastDecideStep = -1e9, prevUp = new Map();
 
 /** Pause with a caption, run the body, resume. Returns false if the pause could not be taken (a reward came up). */
 async function pausedBeat(tag, text, tone, body, readMs = 1700) {
@@ -396,9 +402,12 @@ for (;;) {
   const s = await snapshot();
   const w = s.world, sps = w.tuning.stepsPerSec;
   if (s.mode !== "play") break;
+  lastKnown = { mode: s.mode, stepsPerSec: sps, delivered: w.delivered, dropped: w.dropped, steps: w.step, links: w.links.length };
+  if (stopRequested) { stopReason = "stopped"; break; }
   if (w.step > maxMin * 60 * sps) { stopReason = "max-min"; break; }
 
   // Things the game did on its own since the last look.
+  let acted = false;
   for (const l of w.links) {
     const was = prevUp.get(l.id);
     if (was === true && !l.up) {
@@ -406,36 +415,40 @@ for (;;) {
       await caption("Fiber cut", dark.length > 0 ? `${name(w, l)} is cut and ${dark.join(", ")} had no other link: dark until there is another path.`
         : `${name(w, l)} is cut. Every router recalculates at once and its traffic lands on the second path. Watch which links turn amber.`, "fail", 7);
       if (!demo.cutRemove && dark.length === 0) {
-        demo.cutRemove = true; stats.demos.push("cut link cannot be removed");
         await sleep(2600);
+        let shown = false;
         await pausedBeat("Showing", `A cut link cannot be removed and re-laid to dodge the outage. Trying Remove on ${name(w, l)}:`, "info", async () => {
-          if (await openCard(l.id)) { await sleep(1500); await clickEl("#cardRemove"); await sleep(2600); await closeCard(); }
+          if (await openCard(l.id)) { await sleep(1500); shown = await clickEl("#cardRemove"); await sleep(2600); await closeCard(); }
         });
+        if (shown) { demo.cutRemove = true; stats.demos.push("cut link cannot be removed"); }
       }
+      acted = true;
     } else if (was === false && l.up && Date.now() - lastCaptionAt > 2500) await caption("Repaired", `${name(w, l)} is back. Routes return to the lowest-cost paths.`, "info", 4);
   }
   prevUp = new Map(w.links.map(l => [l.id, l.up]));
+  if (acted) continue;                               // time has passed: look again before deciding anything
 
   // Feature demonstrations that are not decisions.
   const present = sim.presentSites(w);
   if (!demo.inspector && w.step > 26 * sps && w.links.length >= 2 && !w.pendingReward) {
-    demo.inspector = true; stats.demos.push("inspector and lowest-cost path");
     const far = present.flatMap(a => present.map(b => ({ a, b, r: w.routes.get(a.id)?.get(b.id) }))).filter(x => x.r && x.a.id < x.b.id).sort((x, y) => y.r.cost - x.r.cost)[0];
-    await pausedBeat("Showing", "The inspector (I): every link as a table, and the lowest-cost path between any two sites. Paused, links also show their utilization.", "info", async () => {
+    const shown = await pausedBeat("Showing", "The inspector (I): every link as a table, and the lowest-cost path between any two sites. Paused, links also show their utilization.", "info", async () => {
       await key("i"); await sleep(1800);
       if (far) { await page.selectOption("#fromSite", String(far.a.id)); await sleep(700); await page.selectOption("#toSite", String(far.b.id)); await sleep(3200); }
       await clickEl("#inspectClose");
     });
+    if (shown) { demo.inspector = true; stats.demos.push("inspector and lowest-cost path"); }
     continue;
   }
   if (!demo.refused && w.step > 70 * sps && !w.pendingReward && w.step % (40 * sps) > 22 * sps) {
     const tooFar = present.flatMap(a => present.map(b => ({ a, b, km: sim.linkKm(w, a.id, b.id) })))
       .filter(x => x.a.id < x.b.id && !sim.linkBetween(w, x.a.id, x.b.id) && x.km > w.fiberKm).sort((x, y) => x.km - y.km)[0];
     if (tooFar) {
-      demo.refused = true; stats.demos.push("link refused: not enough fiber");
+      let dragged = false;
       await pausedBeat("Showing", `The drag shows a link's length. ${tooFar.a.code}–${tooFar.b.code} is ${tooFar.km.toLocaleString("en-US")} km and only ${w.fiberKm.toLocaleString("en-US")} km of fiber is left, so it is refused.`, "info", async () => {
-        await dragLink(tooFar.a.id, tooFar.b.id, 1800); await sleep(2200);
+        dragged = await dragLink(tooFar.a.id, tooFar.b.id, 1800); await sleep(2200);
       });
+      if (dragged) { demo.refused = true; stats.demos.push("link refused: not enough fiber"); }
       continue;
     }
   }
@@ -478,28 +491,40 @@ for (;;) {
   }
 }
 
+} catch (e) {
+  stopReason = stopRequested ? "stopped" : "error";
+  runError = String(e?.message ?? e).split("\n")[0];
+  console.log(`run ended early (${stopReason}): ${runError}`);
+}
+
 // ---------- the ending ----------
-const end = await page.evaluate(() => { const b = window.__backbone, g = b.game, w = g.world;
-  return { mode: g.mode, delivered: w.delivered, dropped: w.dropped, steps: w.step, links: w.links.length, commands: g.log.length, renderer: b.renderer, frameMs: Math.round(b.frameMs() * 10) / 10 }; });
-const seconds = Math.floor(end.steps / 20);
+const readEnd = () => page.evaluate(() => { const b = window.__backbone, g = b.game, w = g.world;
+  return { mode: g.mode, stepsPerSec: w.tuning.stepsPerSec, delivered: w.delivered, dropped: w.dropped, steps: w.step, links: w.links.length, commands: g.log.length, renderer: b.renderer, frameMs: Math.round(b.frameMs() * 10) / 10 }; });
+const end = (await readEnd().catch(() => null)) ?? lastKnown ?? { mode: "unknown", stepsPerSec: 20, delivered: 0, dropped: {}, steps: 0, links: 0 };
+const seconds = Math.floor(end.steps / end.stepsPerSec);
+try {
 if (stopReason === "over") {
   await caption("Network down", `The drop meter filled after ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}. Traffic grows every minute, so every run ends. Behind the score, the whole run replays as a time-lapse.`, "fail", 16);
   await sleep(19000);
-} else { await caption("Recording stopped", `Still running after ${maxMin} minutes. The recording stops here.`, "info", 5); await sleep(5000); }
-await context.close();
-await browser.close();
+} else if (stopReason === "max-min") { await caption("Recording stopped", `Still running after ${maxMin} minutes. The recording stops here.`, "info", 5); await sleep(5000); }
+} catch { /* the page is already gone */ }
+await context.close().catch(() => {});
+await browser.close().catch(() => {});
 server.close();
 await closeVite();
 
 mkdirSync(outDir, { recursive: true });
-const webm = join(videoTmp, readdirSync(videoTmp).find(f => f.endsWith(".webm")));
+const webmName = readdirSync(videoTmp).find(f => f.endsWith(".webm"));
+if (!webmName) { console.log(JSON.stringify({ seed, stopReason, runError, video: null, note: "no video was captured" })); process.exit(1); }
+const webm = join(videoTmp, webmName);
 const stem = `showcase-${seed}-${width}x${height}`;
 const mp4 = join(outDir, `${stem}.mp4`);
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", (videoOffsetMs / 1000).toFixed(2), "-i", webm, "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", mp4]);
 rmSync(videoTmp, { recursive: true, force: true });
-const result = { seed, size: `${width}x${height}`, headed, stopReason, timeSurvived: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, ...end, ...stats, video: mp4, videoBytes: statSync(mp4).size, pageErrors, chapters };
+const result = { seed, size: `${width}x${height}`, headed, stopReason, runError, timeSurvived: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, ...end, ...stats, video: mp4, videoBytes: statSync(mp4).size, pageErrors, chapters };
 writeFileSync(join(outDir, `${stem}.json`), JSON.stringify(result, null, 2) + "\n");
 const clock = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 writeFileSync(join(outDir, `${stem}-chapters.md`), `# Showcase run, seed \`${seed}\`\n\nVideo: \`${stem}.mp4\`. Survived ${result.timeSurvived}, delivered ${end.delivered.toLocaleString("en-US")}.\n\n| Video | Game clock | What | Caption |\n| --- | --- | --- | --- |\n`
   + chapters.map(c => `| ${clock(c.video)} | ${c.game} | ${c.tag} | ${c.text.replaceAll("|", "/")} |`).join("\n") + "\n");
 console.log(JSON.stringify({ ...result, chapters: chapters.length }));
+if (stopReason === "error") process.exitCode = 1;
