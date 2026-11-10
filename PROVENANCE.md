@@ -197,6 +197,7 @@ not prompts, and are not counted.
 | 5 | 2026-11-10, between 19:00Z and 19:25Z | Show me the hero card and open the location of the videos |
 | 6 | 2026-11-10, about 19:25Z | "go ahead and push, and I consent" |
 | 7 | 2026-11-10, about 19:26Z | "give me a better hero image" |
+| 8 | 2026-11-10, about 22:42Z | "merge the pull request" |
 
 ## Sources read in the rebuild
 
@@ -254,6 +255,7 @@ not prompts, and are not counted.
 | R30 | 2026-11-10T18:58Z | Fresh-copy check on a clone of `0e8572a`: `npm ci`, `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e`, `node tools/confirm-runtime.mjs` | All pass: 124 unit, 74 end-to-end with 4 skipped by design, `dist/` equal to a fresh build, runtime 8 of 8. |
 | R31 | 2026-11-10T19:30Z | `node tools/make-card.mjs arcade 7764 450 0.93` (Playwright Chromium, cwebp); `npm run build`, `npm run verify:dist`, `npm test`, `npx playwright test` on `us1-shape`, `us4-access`, `us5-endless` and the offline tests | New `public/hero.webp`, SHA-256 `8f5b5669…a94c`. All checks pass. |
 | R32 | 2026-11-10T19:33Z | gitleaks 8.30.1 over the working tree; `git push origin speckit-rebuild`; `gh api` to read the branch head and compare with `main`; `gh pr create` and `gh pr edit` | No leaks. Pushed `5fd0490..dbc1179`. Pull request #2 open, mergeable, not merged. |
+| R33 | 2026-11-10T22:42Z | `gh pr view 2`, `gh repo view`, `git ls-remote origin`, `git fetch` and `git rev-list --left-right --count origin/main...HEAD` before the merge; then `gh pr merge 2 --merge --match-head-commit` on the commit that holds this line | Before: open, mergeable, clean, no checks configured; `main` and tag `v1-handbuilt` at `f608e01`; 27 commits ahead of `main`, none behind. The merge's own result is on GitHub's page for pull request #2, not here: this file is part of what is merged. |
 
 ## Changes of direction by the owner in the rebuild
 
@@ -277,3 +279,4 @@ not prompts, and are not counted.
 | The seeded-run videos are committed to the repository | C7's evidence asks for them in the repo. The owner's choice to keep the showcase video of the hand-built v1 private is read as covering that video only (open item L7). |
 | Opened pull request #2 into `main` after the push, and did not merge it | The agent had offered to "push and open the pull request into `main`" and the owner answered "go ahead and push"; the agent read that as the go-ahead for both. Merging changes what the public default branch holds, so it is left to the owner. |
 | The first pull request description was 155 words, over the owner's limit of 150; it was shortened to 146 a minute later | The agent sent it before checking its own count |
+| Pull request #2 is merged with a merge commit, not squashed or rebased, and branch `speckit-rebuild` is kept | The owner said "merge the pull request" (2026-11-10T22:42Z). A merge commit keeps the commits these records name, such as `9b813ab` and `0e8572a`, reachable from `main` under the same hashes; a squash or a rebase would not. Pull request #1 was merged the same way. |
