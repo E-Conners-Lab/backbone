@@ -15,7 +15,7 @@ import { drawOverlay, type OverlayReport } from "./render/overlay";
 import { RIPPLE_MS, buildScene, type DrawReport, type Scene } from "./render/viewmodel";
 import { advanceWithLog } from "./sim/replay";
 import type { Command, Link, LinkId, Reason, SiteId, StepEvents, World } from "./sim/types";
-import { activeSites, createWorld, formatTime, isDark, linkById, presentSites } from "./sim/world";
+import { activeSites, createWorld, formatTime, isDark, linkById, linkLength, presentSites } from "./sim/world";
 import { el, fill, km, show } from "./ui/dom";
 import { Game, type Tool } from "./ui/game";
 import { updateHud, updateStatus } from "./ui/hud";
@@ -99,7 +99,10 @@ function boot(): void {
   const fitCamera = (): void => {
     const px = game ? game.world.sites.map((s) => s.x) : xs;
     const py = game ? game.world.sites.map((s) => s.y) : ys;
-    camera.fit(Math.min(...px) - 300, Math.min(...py) - 300, Math.max(...px) + 300, Math.max(...py) + 300);
+    // Leave the HUD at the top and the controls at the bottom out of the framing, so no site hides behind them.
+    const top = el("hud").hidden || !switches.hud ? 0 : el("hud").offsetHeight;
+    const bottom = el("controls").hidden || !switches.hud ? 0 : el("controls").offsetHeight;
+    camera.fit(Math.min(...px) - 250, Math.min(...py) - 250, Math.max(...px) + 250, Math.max(...py) + 250, top, bottom);
   };
   const resize = (): void => {
     const width = app.clientWidth;
@@ -158,6 +161,11 @@ function boot(): void {
     lapse = null;
     dark = new Set();
     userMoved = false;
+    // The bars are shown and filled before the map is framed, because the framing leaves
+    // their real height free.
+    show(el("hud"), true);
+    show(el("controls"), true);
+    updateHud(game);
     fitCamera();
     inspector.reset();
     inspector.close(false);
@@ -167,8 +175,6 @@ function boot(): void {
     screens.hideGameOver();
     screen = "run";
     app.dataset.screen = "run";
-    show(el("hud"), true);
-    show(el("controls"), true);
     overlay.focus();
     say(event("start", { count: presentSites(game.world).length, seconds: tuning.graceSec }));
     refreshUi();
@@ -229,7 +235,7 @@ function boot(): void {
     if (!game) return;
     const from = game.planned.sites[a - 1];
     const to = game.planned.sites[b - 1];
-    const length = from && to ? Math.max(1, Math.round(Math.hypot(from.x - to.x, from.y - to.y))) : 0;
+    const length = from && to ? linkLength(from, to) : 0;
     const reason = game.issue({ type: "layLink", a, b });
     if (reason === "not-enough-fiber") {
       say(`${reasonText(reason)} It needs ${km(length)} and you have ${km(game.planned.fiberKm)}.`, "warn");
@@ -237,7 +243,7 @@ function boot(): void {
       say(reasonText(reason), "warn");
     } else {
       const laid = event("laid", { link: `${code(Math.min(a, b))}–${code(Math.max(a, b))}`, km: length.toLocaleString("en-US") });
-      say(game.paused ? `${laid} ${text.events.pending ?? ""}` : laid);
+      say(game.holding ? `${laid} ${text.events.pending ?? ""}` : laid);
     }
     refreshUi();
   };
@@ -307,9 +313,14 @@ function boot(): void {
   });
   const reward = new RewardDialog(tuning, (choice) => {
     if (!game) return;
+    const waiting = game.pending.length;
     const reason = game.issue({ type: "chooseReward", choice });
-    if (reason) say(reasonText(reason), "warn");
-    else say(choice === "fiber" ? `Reward taken: ${km(tuning.rewardFiberKm)} of fiber.` : "Reward taken: one capacity upgrade.");
+    if (reason) {
+      say(reasonText(reason), "warn");
+      return;
+    }
+    const taken = choice === "fiber" ? `Reward taken: ${km(tuning.rewardFiberKm)} of fiber.` : "Reward taken: one capacity upgrade.";
+    say(waiting > 0 ? `${taken} ${waiting} pending change${waiting === 1 ? "" : "s"} applied together.` : taken);
   });
   let pausedForAbout = false;
   const screens = new Screens(text, tuning.stepsPerSec, {
@@ -448,6 +459,7 @@ function boot(): void {
         screen,
         seed: game?.seed ?? null,
         step: game?.world.step ?? 0,
+        stepsPerSec: tuning.stepsPerSec,
         score: game?.world.delivered ?? 0,
         emitted: game ? game.world.nextPacketId - 1 : 0,
         dropped: game ? { ...game.world.dropped } : { queue: 0, cut: 0, noRoute: 0 },

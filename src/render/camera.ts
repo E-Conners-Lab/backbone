@@ -28,25 +28,40 @@ export class Camera {
     return this.height * 2.4;
   }
 
+  /**
+   * The tilted map plane meets the eye at a finite distance south of the view's centre, and
+   * its horizon at a finite distance north. Past either, the perspective division gives an
+   * infinite or negative scale. Points are held this share of the way there instead, which
+   * is always far off the bottom or the top of the view, so nothing drawn changes.
+   */
+  private static readonly LIMIT = 0.75;
+
   resize(width: number, height: number): void {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
   }
 
-  /** Centres and zooms so that the box of map points fits, leaving room for the HUD. */
-  fit(minX: number, minY: number, maxX: number, maxY: number, margin = 0.78): void {
+  /**
+   * Centres and zooms so that the box of map points fits in the part of the view that the
+   * bars at the top and bottom leave free.
+   */
+  fit(minX: number, minY: number, maxX: number, maxY: number, top = 0, bottom = 0, margin = 0.84): void {
     this.cx = (minX + maxX) / 2;
     this.cy = (minY + maxY) / 2;
     const spanX = Math.max(1, maxX - minX);
     const spanY = Math.max(1, maxY - minY);
-    this.zoom = Math.min((this.width * margin) / spanX, (this.height * margin) / (spanY * Math.cos(this.tilt)));
+    const free = Math.max(1, this.height - top - bottom);
+    this.zoom = Math.min((this.width * margin) / spanX, (free * margin) / (spanY * Math.cos(this.tilt)));
     this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom));
+    // Put the middle of the box in the middle of the free part, not of the whole view.
+    this.pin({ x: this.cx, y: this.cy }, this.width / 2, top + free / 2);
   }
 
   /** Map km to screen pixels. `depth` shifts a layer for parallax: 1 moves with the map. */
   toScreen(x: number, y: number, depth = 1): ScreenPoint {
     const u = (x - this.cx * depth) * this.zoom;
-    const v = -(y - this.cy * depth) * this.zoom;
+    const nearest = (Camera.LIMIT * this.distance) / Math.sin(this.tilt);
+    const v = Math.min(-(y - this.cy * depth) * this.zoom, nearest);
     const scale = this.distance / (this.distance - v * Math.sin(this.tilt));
     return {
       x: this.width / 2 + u * scale,
@@ -58,8 +73,10 @@ export class Camera {
   /** Screen pixels back to map km. The exact inverse of toScreen at depth 1. */
   toMap(sx: number, sy: number): { x: number; y: number } {
     const p = sx - this.width / 2;
-    const q = sy - this.height / 2;
     const d = this.distance;
+    // A pointer dragged far above the view would reach the horizon, where the division fails.
+    const horizon = (-d * Math.cos(this.tilt)) / Math.sin(this.tilt);
+    const q = Math.max(sy - this.height / 2, Camera.LIMIT * horizon);
     const v = (q * d) / (d * Math.cos(this.tilt) + q * Math.sin(this.tilt));
     const scale = d / (d - v * Math.sin(this.tilt));
     return { x: this.cx + p / scale / this.zoom, y: this.cy - v / this.zoom };

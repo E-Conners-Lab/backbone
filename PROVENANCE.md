@@ -232,6 +232,8 @@ not prompts, and are not counted.
 | R16 | 2026-11-10T17:06Z | RFC 2328 and RFC 2991 downloaded again with `curl` from rfc-editor.org for the text review | SHA-256 equal to the hashes recorded for the hand-built v1 (`981690e2…f50c`, `7ed2e595…1e7f`). RFC 2328 sections 16.1, 16.1.1, 16.8, 9.2, 13.2, C.3 and A.4.2 read; RFC 2991 searched, not read in full. |
 | R17 | 2026-11-10T17:06Z | `python3 tools/frr_check.py`: T1 and T2 as FRR routers in Docker, image `quay.io/frrouting/frr:10.7.1` (digest `sha256:e995beaa50fdc9edb35eadcfefa29b7f062cc06f2b812613789b68fa541554d2`, arm64, already on the machine), hello 1 s, dead 4 s | Pass on the first attempt: all adjacencies Full, 21 of 21 compared routes match. Lab removed afterwards. |
 | R18 | 2026-11-10T17:06Z | Phase 8: `npm run test:e2e` with the WebGL renderer as default; hero art by `tools/make-card.mjs`; frame time read from the page in headless Chromium (WebGL on SwiftShader) | Census zero in both renderers. One suite run had 1 failure of 64: a race in a test, fixed. Final run recorded below. |
+| R19 | 2026-11-10T17:27Z | `/code-review high src tools tests` (Claude Code skill, run by a forked reviewer on the same model); fixes by the build agent | 10 findings, all fixed, none left. Details in `docs/capture-log.md` step 70 and `docs/verification/results.md`. |
+| R20 | 2026-11-10T17:44Z | After the review fixes: `npm test`, `npm run test:e2e`, `python3 tools/frr_check.py` (second run, same image) | Unit 113 of 113. End-to-end 72 pass, 4 skipped by design. FRR: pass, 21 of 21, output identical to the first run; lab removed. |
 
 ## Changes of direction by the owner in the rebuild
 

@@ -2,9 +2,7 @@
 // world and returns commands, like a person would; it has no access a person lacks.
 
 import type { Command, Link, Site, World } from "./types";
-import { dirUtilization, loadState, presentSites } from "./world";
-
-const km = (a: Site, b: Site): number => Math.max(1, Math.round(Math.hypot(a.x - b.x, a.y - b.y)));
+import { dirUtilization, findLink, linkLength as km, loadState, presentSites } from "./world";
 
 function degrees(world: World): Map<number, number> {
   const degree = new Map<number, number>();
@@ -14,9 +12,6 @@ function degrees(world: World): Map<number, number> {
   }
   return degree;
 }
-
-const linked = (world: World, a: number, b: number): boolean =>
-  world.links.some((l) => l.a === Math.min(a, b) && l.b === Math.max(a, b));
 
 /** The hottest link that can still be upgraded, if any is congested or dropping. */
 function hotLink(world: World): Link | undefined {
@@ -62,7 +57,7 @@ export function botCommands(world: World): Command[] {
     for (const site of present) {
       if ((degree.get(site.id) ?? 0) !== 1) continue;
       const target = present
-        .filter((o) => o.id !== site.id && !linked(world, site.id, o.id))
+        .filter((o) => o.id !== site.id && !findLink(world, site.id, o.id))
         .sort((p, q) => km(site, p) - km(site, q) || p.id - q.id)
         .find((o) => km(site, o) <= world.fiberKm - reserve);
       if (target) return [{ type: "layLink", a: site.id, b: target.id }];

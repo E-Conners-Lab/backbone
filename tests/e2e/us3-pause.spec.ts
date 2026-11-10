@@ -194,3 +194,20 @@ test("C3: a full run can be played with every decision made while the clock is s
   expect(end.score).toBeGreaterThan(500);
   await expect(page.locator("#gameover")).toBeVisible();
 });
+
+test("FR-024: the game pauses itself when its page is hidden", async ({ page }, info) => {
+  await open(page, "autostart=1&seed=stage-1");
+  await playTo(page, info, 60, { connect: false });
+  expect((await state(page)).paused).toBe(false);
+  // The browser reports the page as hidden: another tab, or a locked phone.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(async () => (await state(page)).paused).toBe(true);
+  const frozen = (await state(page)).step;
+  await page.waitForTimeout(400);
+  expect((await state(page)).step).toBe(frozen);
+  await expect(page.locator("#messages")).toContainText("Paused while the page was hidden.");
+  await expect(page.locator("#btn-pause")).toHaveText("Resume");
+});

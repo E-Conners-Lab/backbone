@@ -250,7 +250,8 @@ export function cutLink(world: World, id: LinkId, durationSteps: number): void {
 
 // --- commands ---------------------------------------------------------------------------
 
-function linkLength(a: Site, b: Site): number {
+/** Fiber a link between two sites takes, in whole km. The one rule for the budget, the bot and the screen. */
+export function linkLength(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.max(1, Math.round(Math.hypot(a.x - b.x, a.y - b.y)));
 }
 

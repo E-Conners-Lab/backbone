@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { advance, frame, lay, links, linkLoads, messages, open, playTo, report, routes, sites, snapshot, state, tap } from "./helpers";
+import { advance, frame, isPhone, lay, links, linkLoads, messages, open, playTo, report, routes, sites, snapshot, state, takeReward, tap } from "./helpers";
 
 // User Story 2: operate under load and failure.
 
@@ -128,4 +128,48 @@ test("AC6, AC7, AC9, AC11: a scripted run shows congestion and a cut, counts eve
   expect(lapse.step).toBe(end.step);
   expect(lapse.score).toBe(end.score);
   await expect(page.locator("#over-lapse")).toHaveText("Time-lapse finished. It is the recorded run simulated again, not a video.");
+});
+
+test("FR-016: changes made while a reward waits are shown as pending and apply with the choice", async ({ page }, info) => {
+  // Found in code review: the map stays usable while the reward choice is open, and changes
+  // made then were announced as done but reached the simulation only with the choice.
+  await open(page, "autostart=1&seed=stage-1");
+  await lay(page, info, 1, 2);
+  await lay(page, info, 2, 3);
+  for (let i = 0; i < 60 && !(await state(page)).rewardPending && !(await state(page)).over; i++) await advance(page, 40);
+  await expect(page.locator("#reward")).toBeVisible();
+  const before = await state(page);
+  expect(before.rewardPending).toBe(true);
+
+  // Open a link from the inspector and press "+" three times. At phone size the reward
+  // choice lies over the link's options, so there the buttons are pressed with a key.
+  const press = (selector: string): Promise<void> => (isPhone(info) ? page.locator(selector).press("Enter") : page.locator(selector).click());
+  if (!(await page.locator("#inspector").isVisible())) await page.locator("#btn-inspector").click();
+  await page.locator("#link-rows button").first().click();
+  await expect(page.locator("#linkpanel")).toBeVisible();
+  for (let n = 0; n < 3; n++) await press("#lp-plus");
+  await expect(page.locator("#lp-cost")).toHaveValue("13");
+
+  // Each press counted, nothing has reached the simulation, and the screen says so.
+  const held = await state(page);
+  expect(held.pending).toBe(3);
+  expect(held.pendingCommands).toEqual(["setCost", "setCost", "setCost"]);
+  expect(held.step).toBe(before.step);
+  expect(held.rewardPending).toBe(true);
+  await expect.poll(async () => (await links(page)).filter((l) => l.pendingCost === 13).length).toBe(1);
+  const changed = (await links(page)).find((l) => l.pendingCost === 13)!;
+  expect(changed.cost).toBe(10); // the cost in force is still shown
+  await expect(page.locator("#status")).toHaveText("3 changes pending; they take effect together when you choose a reward.");
+  expect((await messages(page)).at(-1)).toContain("Queued. It takes effect when play resumes.");
+  await press("#lp-close");
+
+  await takeReward(page, "fiber");
+  await expect.poll(async () => (await state(page)).pending).toBe(0);
+  await expect.poll(async () => (await links(page)).find((l) => l.id === changed.id)!.cost).toBe(13);
+  const after = await state(page);
+  expect(after.fiberKm).toBe(before.fiberKm + 3000);
+  // The three changes and the choice reached the simulation together.
+  expect(after.logLength).toBe(before.logLength + 4);
+  expect(await messages(page)).toContain("Reward taken: 3,000 km of fiber. 3 pending changes applied together.");
+  await expect(page.locator("#status")).toBeHidden();
 });

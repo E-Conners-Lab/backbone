@@ -52,7 +52,9 @@ export class LinkPanel {
   open(id: LinkId, tool: Tool): void {
     const game = this.game();
     if (!game) return;
-    this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // Focus goes back to where it was before the panel opened. A tool key pressed inside the
+    // open panel re-aims it, and must not make one of the panel's own controls that place.
+    if (this.linkId === null) this.returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.linkId = id;
     game.focusLink = id;
     setText(el("lp-message"), "");
@@ -105,7 +107,7 @@ export class LinkPanel {
     const game = this.game();
     if (!game) return false;
     const reason = game.issue(command);
-    const message = reason ? this.reasonText(reason) : game.paused ? `${done} ${this.text.events.pending ?? ""}` : done;
+    const message = reason ? this.reasonText(reason) : game.holding ? `${done} ${this.text.events.pending ?? ""}` : done;
     setText(el("lp-message"), reason ? message : "");
     say(message, reason ? "warn" : "info");
     this.refresh(true);

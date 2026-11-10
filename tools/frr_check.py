@@ -65,7 +65,11 @@ class LabError(RuntimeError):
 
 def run(args: list[str], check: bool = True) -> str:
     """Runs a command without a shell and returns its standard output."""
-    done = subprocess.run(args, capture_output=True, text=True, check=False)
+    try:
+        done = subprocess.run(args, capture_output=True, text=True, check=False)
+    except OSError as error:
+        # Docker is not installed, or not on PATH.
+        raise LabError(f"{args[0]} could not be run: {error}") from error
     if check and done.returncode != 0:
         raise LabError(
             f"{' '.join(args[:4])} … failed: {done.stderr.strip() or done.stdout.strip()}"
@@ -112,7 +116,13 @@ class Lab:
         return run(args)
 
     def show(self, router: str, command: str) -> Any:
-        return json.loads(self.vtysh(router, command) or "{}")
+        output = self.vtysh(router, command)
+        try:
+            return json.loads(output or "{}")
+        except json.JSONDecodeError as error:
+            raise LabError(
+                f"{router}: '{command}' did not print JSON: {output.strip()[:120]}"
+            ) from error
 
     def build(self, base: int) -> None:
         with tempfile.TemporaryDirectory() as work:
@@ -316,6 +326,8 @@ class Lab:
                 if hop.get("ip") in self.owner
             }
         )
+        if "metric" not in entry:
+            raise LabError(f"{source}: FRR's route to {destination} has no metric")
         return int(entry["metric"]), hops
 
     def destroy(self) -> None:
@@ -326,19 +338,29 @@ class Lab:
                 run(["docker", "network", "rm", link.network], check=False)
 
 
+def matches(item: dict[str, Any], got: tuple[int, list[str]] | None) -> bool:
+    """Whether FRR's route agrees with what a case states: a cost, next hops, or both."""
+    return (
+        got is not None
+        and ("cost" not in item or got[0] == item["cost"])
+        and ("nextHops" not in item or got[1] == sorted(item["nextHops"]))
+    )
+
+
 def settle(
     lab: Lab, expected: list[dict[str, Any]], unreachable: list[list[str]]
 ) -> None:
-    """Waits until FRR's table stops changing toward the expectation, or the time runs out."""
+    """Waits until FRR's table shows the expectation, or the time runs out.
+
+    It waits for everything compare() reads, next hops as well as costs. A change can leave a
+    cost as it was and move only the next hops; waiting for the cost alone would then return
+    before FRR had run its route calculation again, and a correct model would be failed.
+    """
     deadline = time.monotonic() + CONVERGE_SECONDS
     while time.monotonic() < deadline:
-        costs_ok = all(
-            (lab.route(e["from"], e["to"]) or (None,))[0] == e["cost"]
-            for e in expected
-            if "cost" in e
-        )
+        stated_ok = all(matches(e, lab.route(e["from"], e["to"])) for e in expected)
         gone_ok = all(lab.route(a, b) is None for a, b in unreachable)
-        if costs_ok and gone_ok:
+        if stated_ok and gone_ok:
             return
         time.sleep(1)
 
@@ -354,11 +376,7 @@ def compare(
         got = lab.route(item["from"], item["to"])
         want_hops = sorted(item["nextHops"]) if "nextHops" in item else None
         # A case states a cost, next hops, or both. Only what the spec states is compared.
-        ok = (
-            got is not None
-            and ("cost" not in item or got[0] == item["cost"])
-            and (want_hops is None or got[1] == want_hops)
-        )
+        ok = matches(item, got)
         rows.append(
             {
                 "case": label,
@@ -395,12 +413,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    fixtures = json.loads(FIXTURES.read_text())
     prefix = f"bbfrr{os.getpid()}"
     labs: list[Lab] = []
     rows: list[dict[str, Any]] = []
     adjacencies: dict[str, int] = {}
     try:
+        fixtures = json.loads(FIXTURES.read_text())
         run(["docker", "version", "--format", "{{.Server.Version}}"])
         for n, (name, topology) in enumerate(fixtures["topologies"].items()):
             lab = Lab(
@@ -465,14 +483,23 @@ def main() -> int:
             {"from": near, "to": split["to"], "nextHops": hops}
             for near, hops in per_hop.items()
         ]
+        if expected[0]["from"] != split["from"]:
+            raise LabError("case 7: the fixture's first share is not from the source")
         expected[0]["cost"] = split["cost"]
-        assert expected[0]["from"] == split["from"]
-        settle(t2, expected[:1], [])
+        settle(t2, expected, [])
         compare(t2, "case 7", expected, [], rows)
-    except LabError as error:
+    except Exception as error:  # noqa: BLE001
+        # LabError is the expected way to have no verdict. Anything else that goes wrong while
+        # building or reading the lab is no verdict either: status 1 means a case differs, and
+        # must never be the result of a comparison that was not made.
+        reason = (
+            str(error)
+            if isinstance(error, LabError)
+            else f"{type(error).__name__}: {error}"
+        )
         print(
             json.dumps(
-                {"verdict": "no valid verdict", "reason": str(error), "rows": rows},
+                {"verdict": "no valid verdict", "reason": reason, "rows": rows},
                 indent=2,
                 ensure_ascii=False,
             )

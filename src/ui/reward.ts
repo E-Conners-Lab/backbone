@@ -1,5 +1,6 @@
 // The reward choice (R10, FR-016). The game is stopped while it is open and the choice has
-// no time limit.
+// no time limit. The dialog is not modal: the map, the inspector and a link's options stay
+// usable, and changes made meanwhile are held as pending until the choice (ui/game.ts).
 
 import type { Tuning } from "../sim/types";
 import { el, km, setText, show } from "./dom";

@@ -50,6 +50,7 @@ Each of S1–S11 in `text.json` was compared with its row in the spec's "Simplif
 | "Changes made while paused all take effect together when you resume." | Help | FR-024 | Agrees |
 | "It is the recorded run simulated again, not a video." | Game over | FR-021 | Agrees |
 | "Capacity tier 1 of 3: 4 packets per second each way." | Link options | FR-007, FR-014 and the tiers in `tuning.json` | Agrees |
+| Added after the code review: "Time is stopped. Take as long as you like. Changes you make now wait until you choose." and "3 changes pending; they take effect together when you choose a reward." and "Reward taken: 3,000 km of fiber. 3 pending changes applied together." | Reward choice, status line, messages | FR-016 (the game pauses for the choice, no time limit); the behaviour is checked by `tests/unit/game.test.ts` and the FR-016 end-to-end test. These describe the game's own rules and say nothing about OSPF. | Agrees |
 
 ## What this review does not cover
 

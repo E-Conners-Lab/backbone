@@ -1,6 +1,7 @@
 // One run on screen: the world, its command log, the fixed-step loop and pause.
-// While paused, changes are checked against a copy of the world, shown as pending, and all
-// sent together in the first step after resume (FR-024, AC14).
+// While time stands still, because the game is paused or a reward is waiting to be chosen,
+// changes are checked against a copy of the world, shown as pending, and all sent together
+// in the step that starts time again (FR-016, FR-024, AC14).
 
 import { botCommands } from "../sim/bot";
 import { recordCommands } from "../sim/replay";
@@ -52,22 +53,31 @@ export class Game {
     return 1000 / this.tuning.stepsPerSec;
   }
 
-  /** The world the budget and link lists should be read from: with pending changes while paused. */
+  /** The world the budget and link lists should be read from: with pending changes while time stands still. */
   get planned(): World {
     return this.projected ?? this.world;
   }
 
+  /** Time is standing still for the player: the game is paused, or a reward is waiting to be chosen. */
+  get holding(): boolean {
+    return this.paused || this.world.rewardPending;
+  }
+
   /**
    * Sends a command. Returns the reason when the rules refuse it, so the caller can say why.
-   * While paused the command is queued as pending; otherwise it applies at the next step.
+   * While time stands still the command is held as pending; otherwise it applies at the next step.
    */
   issue(command: Command): Reason | null {
-    if (this.paused && command.type !== "chooseReward") {
-      this.projected ??= cloneWorld(this.world);
-      const reason = applyCommand(this.projected, command);
-      if (!reason) this.pending.push(command);
+    if (command.type === "chooseReward") {
+      const reason = validate(this.world, command);
+      if (!reason) {
+        // Changes made while the choice was open go first, in the same step as the choice.
+        this.release();
+        this.queue.push(command);
+      }
       return reason;
     }
+    if (this.holding) return this.hold(command);
     const reason = validate(this.world, command);
     if (!reason) this.queue.push(command);
     return reason;
@@ -76,12 +86,34 @@ export class Game {
   setPaused(paused: boolean): void {
     if (paused === this.paused || this.world.over || this.world.rewardPending) return;
     this.paused = paused;
-    if (!paused) {
-      // Everything queued while paused goes in one step, so there is one route calculation.
-      this.queue.push(...this.pending);
-      this.pending = [];
-      this.projected = null;
+    if (paused) {
+      // A command sent in the instant before the pause has not reached the simulation yet.
+      // It joins the pending changes, so that the copy of the world later changes are checked
+      // against already has it, and link IDs given there match the ones given on resume.
+      const waiting = this.queue;
+      this.queue = [];
+      for (const command of waiting) {
+        const reason = this.hold(command);
+        if (reason) this.hooks.onRejected(reason, command);
+      }
+    } else {
+      this.release();
     }
+  }
+
+  /** Checks a command against the world as it will be, and keeps it as pending if it is allowed. */
+  private hold(command: Command): Reason | null {
+    this.projected ??= cloneWorld(this.world);
+    const reason = applyCommand(this.projected, command);
+    if (!reason) this.pending.push(command);
+    return reason;
+  }
+
+  /** Everything held goes into one step, in the order it was made, so there is one route calculation. */
+  private release(): void {
+    this.queue.push(...this.pending);
+    this.pending = [];
+    this.projected = null;
   }
 
   /** Advances the simulation by the real time that has passed. Never while paused. */
@@ -115,6 +147,8 @@ export class Game {
   }
 
   private stepOnce(): void {
+    // A step taken while a reward waits ends the wait, so what was held goes with it.
+    if (!this.paused) this.release();
     const commands = [...this.queue, ...(this.bot ? botCommands(this.world) : [])];
     this.queue = [];
     recordCommands(this.log, this.world, commands);

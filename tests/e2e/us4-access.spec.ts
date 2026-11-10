@@ -141,6 +141,11 @@ test("AC17: the game can be played by keyboard alone, with focus visible through
   expect((await focused()).visible).toBe(true);
   await press("Enter");
   await expect.poll(async () => (await links(page))[0]!.tier).toBe(1);
+  // A tool key pressed inside the open panel re-aims it. Focus must still return to where it
+  // came from, not to a control of the panel that is about to be hidden (found in review).
+  await press("4");
+  await expect(page.locator("#tool-4")).toHaveAttribute("aria-pressed", "true");
+  expect(await focused()).toMatchObject({ id: "lp-remove", within: "linkpanel", visible: true });
   await press("Escape");
   await expect(page.locator("#linkpanel")).toBeHidden();
   expect(await focused()).toMatchObject({ within: "link-rows", visible: true }); // focus returns to where it came from
@@ -325,4 +330,44 @@ test("a resize or a rotation during a run leaves the run going", async ({ page }
   expect(after.score).toBeGreaterThan(before.score);
   expect(after.over).toBe(false);
   expect((await links(page)).length).toBe(2);
+});
+
+test("AC19: with reduced motion the time-lapse waits to be started, and then replays the run", async ({ page }) => {
+  await open(page, "autostart=1&seed=stage-1&bot=1&motion=reduced");
+  await toGameOver(page);
+  await expect(page.locator("#gameover")).toBeVisible();
+  const end = await state(page);
+  expect(end.lapse).toBeNull();
+  await expect(page.locator("#over-lapse")).toHaveText("Reduced motion is on, so the time-lapse waits until you start it.");
+  await page.locator("#over-replay").click();
+  await expect.poll(async () => (await state(page)).lapse?.playing, { timeout: 30_000 }).toBe(false);
+  const lapse = (await state(page)).lapse!;
+  expect(lapse.step).toBe(end.step);
+  expect(lapse.score).toBe(end.score);
+});
+
+test("FR-030: every site of a run is framed between the HUD and the controls, none behind a bar", async ({ page }) => {
+  // Seen in the phone video: a site near the bottom edge sat under the control bar.
+  await open(page, "autostart=1&seed=stage-1&bot=1");
+  const check = async (count: number): Promise<void> => {
+    const bars = await page.evaluate(() => ({
+      top: document.getElementById("hud")!.getBoundingClientRect().bottom,
+      bottom: document.getElementById("controls")!.getBoundingClientRect().top,
+      width: window.innerWidth,
+    }));
+    expect(bars.bottom - bars.top).toBeGreaterThan(100);
+    const all = await sites(page);
+    expect(all.length).toBe(count);
+    for (const s of all) {
+      expect(s.y, `${s.code} is below the HUD`).toBeGreaterThan(bars.top);
+      expect(s.y, `${s.code} is above the controls`).toBeLessThan(bars.bottom);
+      expect(s.x, `${s.code} is inside the view`).toBeGreaterThan(0);
+      expect(s.x, `${s.code} is inside the view`).toBeLessThan(bars.width);
+    }
+  };
+  await check(3);
+  // By six minutes and five seconds all twelve sites of the run have appeared.
+  await advance(page, 7300);
+  expect((await state(page)).over).toBe(false);
+  await check(12);
 });

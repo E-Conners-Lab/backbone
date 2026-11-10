@@ -19,6 +19,7 @@ export interface HookState {
   upgrades: number;
   paused: boolean;
   pending: number;
+  pendingCommands: string[];
   over: boolean;
   rewardPending: boolean;
   renderer: string;

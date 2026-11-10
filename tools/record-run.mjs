@@ -7,12 +7,13 @@
 // the final numbers of each run. The simulation runs at 4 times real speed; the speed is a
 // multiple of the same fixed step, so the run is the same run as at real speed.
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
+import { serveDist } from "./serve-dist.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const seed = /^[A-Za-z0-9-]{1,24}$/.test(process.argv[2] ?? "") ? process.argv[2] : "stage-1";
@@ -21,12 +22,10 @@ const SIZES = [
   { name: "844x390", width: 844, height: 390, phone: true },
   { name: "1920x1080", width: 1920, height: 1080, phone: false },
 ];
-const port = 9000 + Math.floor(Math.random() * 90);
 const work = mkdtempSync(join(tmpdir(), "backbone-video-"));
-const server = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", join(root, "dist")], { stdio: "ignore" });
+const server = await serveDist();
 
 try {
-  await new Promise((resolve) => setTimeout(resolve, 700));
   const browser = await chromium.launch();
   for (const size of SIZES) {
     const context = await browser.newContext({
@@ -38,7 +37,7 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto(`http://127.0.0.1:${port}/?test=1&autostart=1&bot=1&speed=${SPEED}&seed=${seed}`);
+    await page.goto(`${server.url}?test=1&autostart=1&bot=1&speed=${SPEED}&seed=${seed}`);
     await page.waitForFunction(() => typeof window.__backbone === "object" && window.__backbone.state().over, null, { timeout: 15 * 60 * 1000, polling: 500 });
     // Stay for the time-lapse, then a moment on the finished screen.
     await page.waitForFunction(() => window.__backbone.state().lapse !== null && !window.__backbone.state().lapse.playing, null, { timeout: 60 * 1000, polling: 250 });
@@ -54,7 +53,7 @@ try {
       { stdio: "inherit" },
     );
     if (encode.status !== 0) throw new Error("ffmpeg failed");
-    const seconds = Math.floor(state.step / 20);
+    const seconds = Math.floor(state.step / state.stepsPerSec);
     console.log(
       JSON.stringify({
         video: `docs/verification/run-${seed}-${size.name}.mp4`,
@@ -74,6 +73,6 @@ try {
   }
   await browser.close();
 } finally {
-  server.kill();
+  server.stop();
   rmSync(work, { recursive: true, force: true });
 }

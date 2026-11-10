@@ -1,23 +1,18 @@
 // Takes a screenshot of the built game, for looking at it during development.
 //   node tools/shot.mjs <out.png> <width>x<height> "<query>" [wait ms] [key …]
-// Serves dist/ itself on a free port, so nothing else needs to be running.
+// Serves dist/ itself on a free port (tools/serve-dist.mjs), so nothing else needs to be running.
 
-import { spawn } from "node:child_process";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
+import { serveDist } from "./serve-dist.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const [out, size = "1920x1080", query = "", wait = "1500", ...keys] = process.argv.slice(2);
 if (!out) {
   console.error('usage: node tools/shot.mjs <out.png> <width>x<height> "<query>" [wait ms] [key …]');
   process.exit(2);
 }
 const [width, height] = size.split("x").map(Number);
-const port = 8800 + Math.floor(Math.random() * 90);
-const server = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", join(root, "dist")], { stdio: "ignore" });
+const server = await serveDist();
 try {
-  await new Promise((resolve) => setTimeout(resolve, 700));
   const browser = await chromium.launch();
   const phone = width < 1000;
   const page = await browser.newPage({ viewport: { width, height }, hasTouch: phone, isMobile: phone });
@@ -26,7 +21,7 @@ try {
   page.on("console", (message) => {
     if (message.type() === "error") problems.push(`console: ${message.text()}`);
   });
-  await page.goto(`http://127.0.0.1:${port}/${query}`);
+  await page.goto(`${server.url}${query}`);
   await page.waitForTimeout(Number(wait));
   for (const key of keys) {
     await page.keyboard.press(key);
@@ -37,5 +32,5 @@ try {
   console.log(JSON.stringify({ out, state, problems }));
   await browser.close();
 } finally {
-  server.kill();
+  server.stop();
 }

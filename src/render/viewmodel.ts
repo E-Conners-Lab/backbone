@@ -4,7 +4,7 @@
 
 import type { Coast } from "../content/load";
 import type { Link, LinkId, SiteId, World } from "../sim/types";
-import { capacityOf, dirUtilization, isDark, loadState, presentSites, type LoadState } from "../sim/world";
+import { capacityOf, dirUtilization, isDark, linkLength, loadState, presentSites, type LoadState } from "../sim/world";
 import type { Camera } from "./camera";
 
 export type LinkLook = LoadState | "cut";
@@ -85,6 +85,8 @@ export interface Scene {
   paused: boolean;
   reducedMotion: boolean;
   timeMs: number;
+  /** Packets a link direction can hold waiting (tuning), so a full queue can be marked. 0 with no run. */
+  queueLen: number;
   /** Screen-space polylines: flat x, y lists. */
   land: number[][];
   lakes: number[][];
@@ -170,6 +172,7 @@ export function buildScene(world: World | null, view: ViewState): Scene {
     paused: view.paused,
     reducedMotion: still,
     timeMs: view.nowMs,
+    queueLen: world?.tuning.queueLen ?? 0,
     // Parallax applies to the grid, the coastline and the sweep only, and not when motion is reduced.
     land: polylines(view.coast.rings, camera, still ? 1 : COAST_DEPTH),
     lakes: polylines(view.coast.lakes, camera, still ? 1 : COAST_DEPTH),
@@ -291,7 +294,7 @@ export function buildScene(world: World | null, view: ViewState): Scene {
     const start = at.get(view.drag.from);
     if (from && start) {
       const target = camera.toMap(view.drag.x, view.drag.y);
-      const km = Math.max(1, Math.round(Math.hypot(target.x - from.x, target.y - from.y)));
+      const km = linkLength(from, target);
       const budget = (projected ?? world).fiberKm;
       scene.drag = { ax: start.x, ay: start.y, bx: view.drag.x, by: view.drag.y, km, affordable: km <= budget };
     }

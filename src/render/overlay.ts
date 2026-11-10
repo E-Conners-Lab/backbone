@@ -157,7 +157,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, scene: Scene, palette
         if (along > g.length * 0.45) break;
         const x = fromX + g.ux * along * dir + g.nx * (edge + 4.5 * link.s) * dir;
         const y = fromY + g.uy * along * dir + g.ny * (edge + 4.5 * link.s) * dir;
-        ctx.fillStyle = css(count >= 8 ? palette.congestion! : palette.pulse!, 0.9);
+        ctx.fillStyle = css(count >= scene.queueLen ? palette.congestion! : palette.pulse!, 0.9);
         ctx.fillRect(x - square / 2, y - square / 2, square, square);
       }
     };

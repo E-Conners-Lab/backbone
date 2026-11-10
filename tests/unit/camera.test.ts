@@ -36,6 +36,21 @@ describe("camera (FR-029: touch targets stay right on the tilted map)", () => {
     }
   });
 
+  it("fits the box into the part of the view the bars leave free", () => {
+    const c = new Camera();
+    c.resize(844, 390);
+    c.fit(-1000, -900, 1000, 900, 44, 52);
+    for (const [x, y] of [[-1000, -900], [1000, 900], [-1000, 900], [1000, -900]] as const) {
+      const p = c.toScreen(x, y);
+      expect(p.y).toBeGreaterThan(44);
+      expect(p.y).toBeLessThan(390 - 52);
+      expect(p.x).toBeGreaterThan(0);
+      expect(p.x).toBeLessThan(844);
+    }
+    // The middle of the box sits in the middle of the free part.
+    expect(c.toScreen(0, 0).y).toBeCloseTo(44 + (390 - 44 - 52) / 2, 6);
+  });
+
   it("zooming keeps the point under the pointer where it is, and panning moves the map with the drag", () => {
     const c = camera(1920, 1080);
     const under = c.toMap(400, 300);
@@ -66,6 +81,28 @@ describe("camera (FR-029: touch targets stay right on the tilted map)", () => {
     expect(c.zoom).toBe(c.maxZoom);
     for (let i = 0; i < 80; i++) c.zoomAt(0.5, 100, 100);
     expect(c.zoom).toBe(c.minZoom);
+  });
+
+  it("zoomed far in, points beyond the eye or the horizon keep a positive, finite scale", () => {
+    // Found in review: at high zoom a point far south of the centre had a negative scale,
+    // which mirrored its link and gave the fallback renderer a negative radius to draw.
+    for (const [w, h] of [[844, 390], [1920, 1080], [390, 844]] as const) {
+      const c = camera(w, h);
+      c.zoom = c.maxZoom;
+      for (const [x, y] of [[0, -1500], [300, -9000], [-2400, -90000], [0, 1300], [2000, 90000]] as const) {
+        const p = c.toScreen(x, y);
+        expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+        expect(p.s).toBeGreaterThan(0);
+        expect(p.s).toBeLessThanOrEqual(4);
+      }
+      // A point held at the limit is off the bottom of the view, so the hold is never seen.
+      expect(c.toScreen(0, -90000).y).toBeGreaterThan(h);
+      // A pointer far above or below the view still maps to a finite place.
+      for (const sy of [-50 * h, 50 * h]) {
+        const m = c.toMap(w / 2, sy);
+        expect(Number.isFinite(m.x) && Number.isFinite(m.y)).toBe(true);
+      }
+    }
   });
 
   it("hit targets are 44 CSS pixels across", () => {

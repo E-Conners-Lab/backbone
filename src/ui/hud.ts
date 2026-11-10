@@ -41,6 +41,9 @@ export function updateStatus(game: Game, siteCode: (id: number) => string): void
   } else if (game.paused) {
     const n = game.pending.length;
     text = n === 0 ? "Paused. Every tool works. Space resumes." : `Paused. ${n} change${n === 1 ? "" : "s"} pending; ${n === 1 ? "it takes" : "they take"} effect together on resume.`;
+  } else if (game.world.rewardPending && game.pending.length > 0) {
+    const n = game.pending.length;
+    text = `${n} change${n === 1 ? "" : "s"} pending; ${n === 1 ? "it takes" : "they take"} effect together when you choose a reward.`;
   }
   setText(status, text);
   status.hidden = text === "";
