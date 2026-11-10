@@ -47,7 +47,7 @@ def eastern(cell: str) -> str:
         r"(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?Z(.*)", cell.strip()
     )
     if not found:
-        return cell
+        return eastern_approx(cell)
     day, hh, mm, ss, rest = found.groups()
     moment = (
         datetime.fromisoformat(f"{day}T{hh}:{mm}:{ss or '00'}")
@@ -55,6 +55,29 @@ def eastern(cell: str) -> str:
         .astimezone(EASTERN)
     )
     return f"{moment.strftime('%a %b')} {moment.day}, {moment.strftime('%I:%M %p %Z').lstrip('0')}{rest}"
+
+
+def eastern_approx(cell: str) -> str:
+    """Rewrites "YYYY-MM-DD, about HH:MM" or "...HH:MM–HH:MM" (UTC) as US Eastern; leaves other text alone."""
+    found = re.match(
+        r"(\d{4}-\d{2}-\d{2}), about (\d{2}:\d{2})(?:–(\d{2}:\d{2}))?$", cell.strip()
+    )
+    if not found:
+        return cell
+    day, start, end = found.groups()
+
+    def local(clock: str) -> datetime:
+        return (
+            datetime.fromisoformat(f"{day}T{clock}:00")
+            .replace(tzinfo=UTC)
+            .astimezone(EASTERN)
+        )
+
+    first = local(start)
+    text = f"{first.strftime('%a %b')} {first.day}, about {first.strftime('%I:%M %p').lstrip('0')}"
+    if end:
+        text += f"–{local(end).strftime('%I:%M %p').lstrip('0')}"
+    return f"{text} {first.strftime('%Z')}"
 
 
 def sections(markdown: str) -> dict[str, list[str]]:

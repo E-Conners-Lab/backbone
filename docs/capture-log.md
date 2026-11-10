@@ -24,6 +24,11 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T00:48:08Z | Milestone 3: v1 built, all checks rerun, videos re-recorded, records updated |
 | 2026-11-10T01:03Z | Owner gave creator details and chose a public repo; five commits pushed to `E-Conners-Lab/backbone` |
 | 2026-11-10T01:05Z | Milestone 4: fresh clone of the public repo passes every check |
+| 2026-11-10, about 01:00–02:30 | Showcase player and captioned run recorder written, scored headlessly against the bot on 20 seeds, rehearsed headlessly |
+| 2026-11-10T02:16Z | First visible showcase run crashed at the start (see gotchas); fixed and reopened 12 minutes later |
+| 2026-11-10T02:39Z | Owner stopped the visible run at game clock 6:04. No finished showcase video exists. |
+| 2026-11-10, about 02:45 | Owner played the game by hand, gave consent to publish and confirmed the name Backbone |
+| 2026-11-10T03:08Z | Milestone 5: owner accepted the three secure-build exceptions with no expiry and confirmed the creator name. No owner decision is left open for the Arcade submission. |
 
 ## Steps and results
 
@@ -57,6 +62,13 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 26 | Create the public GitHub repo, commit, push | Done: https://github.com/E-Conners-Lab/backbone, five commits on `main` |
 | 27 | Fresh clone: serve `dist/`, then install, unit tests, build, dist check, end-to-end tests | All passed at commit `39a62da` |
 | 28 | Owner plays it on a phone | **Not done.** The owner will do this later. |
+| 29 | Showcase player (`tools/showcase/player.ts`): forecasts load on a copy of the simulation before each change | Beats or ties the bot on 18 of 20 seeds in headless scoring; loses by seconds on `loop` and `arcade`. 2 new unit tests; 35 pass. |
+| 30 | Showcase recorder (`tools/showcase/record.mjs`): plays through real mouse and keyboard input with captions | Headless dry runs clean: 81 inputs, 0 fallbacks, 0 skipped over 5 game minutes on seed `2328`. A 3x rehearsal reached game minute 12 before it was stopped. |
+| 31 | Visible run for the owner to watch and record, seed `2328` | Second attempt ran cleanly to game clock 6:04, then the owner stopped it. **No run was recorded to game over.** |
+| 32 | Open the game for the owner to play by hand | Done. Owner: "seems to be pretty good". Run length not recorded. |
+| 33 | Record the owner's decisions: consent, name, exceptions, creator name | Done in `ARCADE.md`, README, PID, spec, checklist and provenance |
+| 34 | Spec-driven development map: `docs/spec-map.html` and `docs/spec-map.png` | Done; checked at desktop and phone widths |
+| 35 | Code review of the branch at level `high` | 10 findings. Fixed: forecast scoring at game over, recorder keeps its video when a run stops early, demos counted only when shown, stale snapshot after a cut, runbook times, test counts, two hard-coded values. Left, with reasons given to the owner: shared input helpers, retune search cost, small duplicated helpers. |
 
 ## Gotchas
 
@@ -74,6 +86,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | FRR costs all read 1 lower than the spec | The comparison script subtracted an assumed loopback cost; FRR advertises the loopback at metric 0 | Read the metric from FRR's own router-LSA |
 | FRR disagreed with the spec on five routes | One adjacency in the lab never formed, so FRR was routing a different topology | Health gate: no comparison unless all adjacencies are Full and router IDs are right. Native arm64 image instead of an emulated one. |
 | "Three equal paths carry a third each" is a tempting but wrong model | Forwarding is hop by hop | Spec case 7 |
+| Showcase recorder: a keyboard-laid link and typed costs did nothing in headless runs | The "press Enter to begin" hook swallowed every Enter when no person was there to press it | The hook is switched off once the run begins |
+| Showcase recorder: three cost edits on one link fell back to direct commands | With many links, that link's row was scrolled out of view in the inspector, so the click missed | Scroll the row into view before clicking |
+| First visible showcase run crashed after the owner pressed Enter | The agent told the owner to click in the window first; the click reached a game control, the game left the welcome screen, and the recorder waited for a button that was gone | A click shield covers the page while it waits; a missing button is no longer fatal. Checked by an automated click on Start. |
 
 ## Questions and answers
 
@@ -86,14 +101,20 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Open the game when done | Owner | Done |
 | `ARCADE.md` creator fields | Agent | Owner: GitHub `E-Conners-Lab`, no location, not a first spec-driven project. Display name taken from the git author; owner to confirm. |
 | Create the repo and commit? | Agent | Owner: public repo, commit, push |
-| `consent_to_publish` | Agent | **Open.** Still `false`; only the owner sets it. |
-| Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. **Open** until the owner accepts them. |
+| `consent_to_publish` | Agent | Owner, 2026-11-09, after playing the game: consent given. Set to `true` on his instruction. |
+| Is "Backbone" the final name? | Agent | Owner, 2026-11-09: keep the name Backbone. "Working title" removed from the README, PID and spec. |
+| Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. Owner, 2026-11-09: accept all three, no expiry. |
+| Creator display name | Agent | Owner, 2026-11-09: keep "Elliot Conner" |
+| Record a run of the agent playing, showing every scenario | Owner | A scripted player and recorder were built. The owner watched about 6 game minutes live and stopped the run. No finished video. |
+| Does the Arcade need a hosted URL? | Owner | No. The template describes `hosted_url` as "public URL if it is deployed (GitHub Pages etc), else" blank, and the Arcade page asks only for a public repo URL with the consent box ticked. The Per-Hop Works example has a "Play now" link on the Arcade's own site; how that copy is produced was not verified. Checked 2026-11-09 from the template, the Arcade page and the example page. |
+| The rules say only the owner sets `consent_to_publish`, and the agent made the edit. Keep it or redo it by hand? | Agent | Owner, 2026-11-09: keep the edit. Recorded in PID amendment 1.2. |
+| Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 
 ## Open items
 
-- Owner decides on `consent_to_publish` in `ARCADE.md` and confirms the display name.
-- Owner accepts or rejects the three secure-build exceptions.
+- These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
+- No showcase run has been recorded to game over.
 - Frame rate on a real mid-range phone has not been measured.
-- Nobody has played it by hand. Run length for people is unknown.
+- The owner played it by hand on 2026-11-09 ("seems to be pretty good"). How long the run lasted was not recorded, so run length for people is still unknown.
 - In FRR attempt 2, two routers reported unexpected router IDs while being probed. The cause was not found. Later runs verify router IDs before comparing.
 - The session start time and wall time are not recorded.

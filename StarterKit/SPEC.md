@@ -1,6 +1,6 @@
 # Backbone · First playable specification
 
-**Status:** approved by the owner on 2026-11-09 with every default accepted (Q1–Q9, D1–D6). "Backbone" is a working title.
+**Status:** approved by the owner on 2026-11-09 with every default accepted (Q1–Q9, D1–D6). "Backbone" began as a working title; the owner confirmed it as the name on 2026-11-09.
 This file describes observable behavior. Implementation choices are in `PLAN.md`.
 
 ## The pitch

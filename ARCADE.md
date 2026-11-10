@@ -1,6 +1,6 @@
 ---
 # ARCADE SUBMISSION for Backbone. Facts come from PROVENANCE.md, README.md and docs/capture-log.md in this repository.
-# Fields marked (HUMAN) are left for the owner. consent_to_publish is false until the owner sets it.
+# Fields marked (HUMAN) are left for the owner. consent_to_publish was set on the owner's instruction on 2026-11-09.
 arcade_version: 1
 
 game:
@@ -27,7 +27,7 @@ creator:                     # (HUMAN) filled in from the owner's answers on 202
   links: []
   first_spec_project: false
   workshop: "NAF AC6"
-  consent_to_publish: false  # (HUMAN) the build agent does not set this
+  consent_to_publish: true   # (HUMAN) the owner gave consent on 2026-11-09, after playing the game
 
 build:
   started: unknown           # not recorded; the first timestamp captured was 2026-11-09T22:52:04Z, after the first fetches
@@ -71,7 +71,7 @@ runtime:
 
 verification:
   tests: "npm test && npm run build && npm run test:e2e"
-  tests_passing: 42           # 33 unit (Vitest) + 9 end-to-end (Playwright); 1 end-to-end test is skipped by design
+  tests_passing: 44           # 35 unit (Vitest) + 9 end-to-end (Playwright); 1 end-to-end test is skipped by design
   facts_sourced_from: ["RFC 2328", "RFC 2991"]
   known_limits: ["Single area, point-to-point links, one router per site", "Convergence is instant: no hello or dead timers, flooding delay or micro-loops", "One cost per link for both directions", "Each router keeps one equal-cost route in v1; ties go to the lowest router ID", "Fixed-size packets, fixed-rate queue with tail drop, no TCP or QoS", "Capacity upgrades do not change cost", "Only links fail", "Run length for human players and frame rate on a real phone were not measured"]
 ---

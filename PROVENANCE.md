@@ -139,7 +139,7 @@ Downloaded as plain text from `https://www.rfc-editor.org/rfc/rfcNNNN.txt` with 
 
 | Decision | Why |
 | --- | --- |
-| `creator.name` in `ARCADE.md` set to "Elliot Conner" | Taken from the git author name; the owner gave the GitHub account but did not state a display name. Flagged for him to change. |
+| `creator.name` in `ARCADE.md` set to "Elliot Conner" | Taken from the git author name; the owner gave the GitHub account but did not state a display name. Flagged for him to change. The owner confirmed "Elliot Conner" on 2026-11-09. |
 | IBM Plex Sans and Mono as the typeface | Proposed twice as the default if the owner did not object; the owner approved without objecting |
 | Removed "mute control" from v1 | The owner accepted sound in v1.1; recorded as a spec amendment |
 | A cut link cannot be removed | Closes an exploit found in review; recorded as a spec amendment |
