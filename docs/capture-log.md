@@ -29,6 +29,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T02:39Z | Owner stopped the visible run at game clock 6:04. No finished showcase video exists. |
 | 2026-11-10, about 02:45 | Owner played the game by hand, gave consent to publish and confirmed the name Backbone |
 | 2026-11-10T03:08Z | Milestone 5: owner accepted the three secure-build exceptions with no expiry and confirmed the creator name. No owner decision is left open for the Arcade submission. |
+| 2026-11-10T03:36Z | Owner merged pull request 1 |
+| 2026-11-10, about 04:10 | Owner asked whether the build followed the workshop's method. Lab guide read in full: it runs through Spec Kit's seven commands, which v1 did not use. Owner chose to rebuild v1 through those steps. |
+| 2026-11-10T03:59Z | Rebuild setup done on branch `speckit-rebuild`: v1 tagged `v1-handbuilt`, game code removed, Spec Kit 1.2.2 initialized with the Claude integration |
 
 ## Steps and results
 
@@ -69,6 +72,11 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 33 | Record the owner's decisions: consent, name, exceptions, creator name | Done in `ARCADE.md`, README, PID, spec, checklist and provenance |
 | 34 | Spec-driven development map: `docs/spec-map.html` and `docs/spec-map.png` | Done; checked at desktop and phone widths |
 | 35 | Code review of the branch at level `high` | 10 findings. Fixed: forecast scoring at game over, recorder keeps its video when a run stops early, demos counted only when shown, stale snapshot after a cut, runbook times, test counts, two hard-coded values. Left, with reasons given to the owner: shared input helpers, retune search cost, small duplicated helpers. |
+| 38 | Read the workshop lab guide in full (fetched from the workshop repo) | It requires `specify init .` and seven agent commands: constitution, specify, clarify, plan, tasks, analyze, implement. **Corrected:** the agent had told the owner v1 already followed what the workshop hands out; it used the StarterKit files but not Spec Kit. |
+| 39 | Tag the hand-built v1 as `v1-handbuilt`; create branch `speckit-rebuild` in its own worktree | Done, both pushed |
+| 40 | Clean slate on the rebuild branch: remove `src/`, `tests/`, `dist/`, build config, game tools, `tasks.md`, verification videos | Done. Kept: the three `StarterKit/` inputs, `mock/`, `LICENSE`, `README.md`, `ARCADE.md`, `PROVENANCE.md`, `docs/`, `tools/build_runbook.py`. |
+| 41 | `specify init --here --force --non-interactive --integration claude` | Done. Spec Kit 1.2.2; skills in `.claude/skills/`, configuration in `.specify/`. |
+| 42 | Lab step 1, `/speckit-constitution`, from the running session | **Not run.** The session that ran `specify init` cannot see the new commands; the lab says to restart the agent in the project. |
 
 ## Gotchas
 
@@ -111,6 +119,9 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 
 ## Open items
+
+- Spec Kit rebuild: the seven lab steps are still to be run, each reviewed by the owner before the next, in an agent session started in the rebuild folder.
+- On the rebuild branch `README.md`, `ARCADE.md`, `docs/spec-map.*` and the secure-build checklist still describe the hand-built v1. They are rewritten after step 7.
 
 - These records and the showcase tooling are on branch `worktree-showcase-run`, not on `main`. The owner merges.
 - No showcase run has been recorded to game over.
