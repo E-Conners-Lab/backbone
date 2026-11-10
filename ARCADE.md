@@ -1,6 +1,6 @@
 ---
 # ARCADE SUBMISSION for Backbone. Facts come from PROVENANCE.md, README.md and docs/capture-log.md in this repository.
-# Fields marked (HUMAN) are left for the owner. consent_to_publish is false until the owner sets it.
+# Fields marked (HUMAN) are left for the owner. consent_to_publish was set on the owner's instruction on 2026-11-09.
 arcade_version: 1
 
 game:
@@ -27,7 +27,7 @@ creator:                     # (HUMAN) filled in from the owner's answers on 202
   links: []
   first_spec_project: false
   workshop: "NAF AC6"
-  consent_to_publish: false  # (HUMAN) the build agent does not set this
+  consent_to_publish: true   # (HUMAN) the owner gave consent on 2026-11-09, after playing the game
 
 build:
   started: unknown           # not recorded; the first timestamp captured was 2026-11-09T22:52:04Z, after the first fetches

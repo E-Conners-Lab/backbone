@@ -86,14 +86,15 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Open the game when done | Owner | Done |
 | `ARCADE.md` creator fields | Agent | Owner: GitHub `E-Conners-Lab`, no location, not a first spec-driven project. Display name taken from the git author; owner to confirm. |
 | Create the repo and commit? | Agent | Owner: public repo, commit, push |
-| `consent_to_publish` | Agent | **Open.** Still `false`; only the owner sets it. |
+| `consent_to_publish` | Agent | Owner, 2026-11-09, after playing the game: consent given. Set to `true` on his instruction. |
+| Is "Backbone" the final name? | Agent | Owner, 2026-11-09: keep the name Backbone. "Working title" removed from the README, PID and spec. |
 | Three secure-build exceptions (no secret scanner hook, no CI scan, no signing or SBOM) | Agent | Owner asked whether they are necessary here. Agent: no, and a one-off secret scan was run before publishing. **Open** until the owner accepts them. |
 
 ## Open items
 
-- Owner decides on `consent_to_publish` in `ARCADE.md` and confirms the display name.
+- Owner confirms the creator display name in `ARCADE.md` ("Elliot Conner", taken from the git author). Consent to publish and the game's name are settled.
 - Owner accepts or rejects the three secure-build exceptions.
 - Frame rate on a real mid-range phone has not been measured.
-- Nobody has played it by hand. Run length for people is unknown.
+- The owner played it by hand on 2026-11-09 ("seems to be pretty good"). How long the run lasted was not recorded, so run length for people is still unknown.
 - In FRR attempt 2, two routers reported unexpected router IDs while being probed. The cause was not found. Later runs verify router IDs before comparing.
 - The session start time and wall time are not recorded.

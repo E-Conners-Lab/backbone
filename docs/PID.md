@@ -1,7 +1,7 @@
 # Project Initiation Document
 
 ## Project
-**Name:** Backbone (working title)
+**Name:** Backbone (confirmed by the owner on 2026-11-09)
 **Date:** 2026-11-09
 **Author:** Elliot Conner, with Claude Code (`claude-fable-5-2`)
 
