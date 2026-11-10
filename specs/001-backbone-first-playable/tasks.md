@@ -220,7 +220,7 @@ description: "Task list for Backbone, first playable version (v1)"
 - [X] T065 Review every sentence of explanatory text that ships, namely `src/content/text.json` and the model section of `README.md`, against the spec's two model tables and the cited RFC sections; record the review in `docs/verification/text-review.md` (C1 evidence).
 - [X] T066 Record every acceptance criterion AC1–AC26 and every success criterion SC-001–SC-013 as pass, fail or not run, with the check that produced it, in `docs/verification/results.md`. SC-011 (the C2 evidence), SC-012 and SC-013 need a person and are recorded as not run (SC-004).
 - [X] T067 Update `ARCADE.md` (leave `consent_to_publish` exactly as it is; C7, K4), `docs/secure-build-checklist.md` and `docs/spec-map.html` so they describe the rebuilt game.
-- [ ] T068 Run `/code-review` at level `high` on the branch, fix the real findings, and record what was left and why (C5: AI output is reviewed like any other contribution).
+- [X] T068 Run `/code-review` at level `high` on the branch, fix the real findings, and record what was left and why (C5: AI output is reviewed like any other contribution).
 - [X] T069 Fresh-copy check: clone the branch into an empty folder, serve `dist/`, then `npm ci`, `npm test`, `npm run build`, `npm run verify:dist` and `npm run test:e2e`; record the results in `docs/verification/results.md` (SC-010).
 - [ ] T070 Bring `PROVENANCE.md`, `docs/capture-log.md` and `docs/runbook.html` up to date (C7).
 

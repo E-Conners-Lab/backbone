@@ -10,7 +10,7 @@ A project from **NAF AC6 — Loop Engineering, Spec-Driven Development & the Fut
 
 | Project | Details |
 | --- | --- |
-| Status | **Playable v1, rebuilt through Spec Kit on branch `speckit-rebuild`.** Verified by automated tests in Chromium. Not yet played by a person, on a desktop or on a phone. Not merged to `main`. |
+| Status | **Playable v1, rebuilt through Spec Kit.** Verified by automated tests in Chromium. Not yet played by a person, on a desktop or on a phone. |
 | Networking topic | OSPF shortest path by cost, equal-cost next hops, reconvergence after a failure (RFC 2328) |
 | Typical session | The scripted player's runs last 6¼ to 7¼ minutes on eight seeds. How long a person's run lasts has not been measured. |
 | Live demo | Not published |
@@ -40,7 +40,7 @@ The built game is in `dist/` and needs no install. From the repository root:
 python3 -m http.server 8791 --bind 127.0.0.1 --directory dist
 ```
 
-Open **http://127.0.0.1:8791**. Press Ctrl+C to stop the server. Any free port works; use the same number in both places.
+Open **http://127.0.0.1:8791**. Press Ctrl+C to stop the server. Any free port works; use the same number in both places. On Windows the Python launcher is `py` in place of `python3`; that was not tried here.
 
 To work on the source you need Node (26.3.1 was used):
 
@@ -123,11 +123,12 @@ The project follows the workshop's Spec Kit workflow: **constitution → specify
 - **Working artifacts:** `.specify/memory/constitution.md` (version 1.1.0) and, in `specs/001-backbone-first-playable/`, `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `tasks.md` and `checklists/requirements.md`.
 - **Records:** `PROVENANCE.md` (what was used and every verification step), `docs/capture-log.md` and `docs/runbook.html` (the build log and build book), `docs/verification/` (results, the analysis report, the hand trace, the text review, the FRR result, the videos), `ARCADE.md` (the Arcade submission).
 - **One useful design decision:** the clarify step fixed the order of work inside a simulation step from a hand-worked case. A link offered 6 packets a second with room for 4 must end 10 seconds with 40 served, 8 queued and 12 dropped. Only "serve, then accept arrivals" gives those numbers; the other order gives 40, 7 and 13.
+- **Where it lives:** the rebuild was made on branch `speckit-rebuild`. The hand-built version it replaces is tag `v1-handbuilt`.
 - **Where this build departed from the lab:** the lab says to read what each step produces before the next. The owner reviewed step 1 and then asked for the rest to run unattended, so steps 2 to 7 were not reviewed one by one, and the five clarify questions were answered by the agent from the owner's approved decisions. Those answers are marked in the spec for his review.
 
 ## Verification
 
-**Last checked:** 2026-11-10, on branch `speckit-rebuild`. The code and `dist/` are as of commit `24ea96b`; the fresh-copy check ran on a clone of `69aa8d4`. Commits after that change records only.
+**Last checked:** 2026-11-10, macOS 26.7.1 (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. The code and `dist/` are as of commit `9b813ab` on branch `speckit-rebuild`; later commits change records only.
 
 ```sh
 npm test               # unit tests (Vitest)
@@ -136,29 +137,32 @@ npm run verify:dist    # the committed dist/ equals a fresh build
 npm run test:e2e       # end-to-end tests against dist/ (Playwright, Chromium)
 npm run record         # the seeded-run videos
 python3 tools/frr_check.py   # compare the routing cases with FRR in Docker
+node tools/confirm-runtime.mjs   # run the game once as ARCADE.md's Runtime section says
 ```
 
 | Check | Result | Evidence / notes |
 | --- | --- | --- |
-| Spec cases 1–12 (correct, tie, boundary, cut, no path, overload, score, determinism) | Pass | `npm test`: 113 of 113 pass. Expected values come from `tests/fixtures/ospf-cases.json`, typed from the spec. |
+| Spec cases 1–12 (correct, tie, boundary, cut, no path, overload, score, determinism) | Pass | `npm test`: 124 of 124 pass. Expected values come from `tests/fixtures/ospf-cases.json`, typed from the spec. |
 | Routing against an independent brute-force oracle | Pass | Every router pair on 320 seeded random graphs |
 | Routing against a real OSPF implementation | Pass | `tools/frr_check.py`: 21 of 21 compared routes match FRR 10.7.1, all adjacencies Full. Case 6's tie-break is the game's own rule and is not compared. `docs/verification/frr-check.json` |
 | Same seed and inputs give the same run | Pass | Hash equal at every step across two plays and across a replay from the command log; in the browser, two scripted runs end on the same score and the time-lapse replays to it |
 | Simulation is pure (no DOM, clock, random or renderer) | Pass | Source scan in `tests/unit/purity.test.ts` |
 | A new region is data only | Pass | The unchanged simulation runs on a trial region; one packet traced by hand in `docs/verification/hand-trace.md` |
 | Explanatory text checked against the spec and RFC 2328 | Pass | `docs/verification/text-review.md`. One reviewer, the agent that wrote the text. |
-| All 26 acceptance criteria | Pass | `npm run test:e2e`: 72 pass, 4 skipped by design (each is checked at the other screen size). Per-criterion table in `docs/verification/results.md`. |
+| All 26 acceptance criteria | Pass | `npm run test:e2e`: 74 pass, 4 skipped by design (each is checked at the other screen size). Per-criterion table in `docs/verification/results.md`. |
 | Full run at 1920×1080 by mouse and at 844×390 by touch | Pass | End-to-end tests with real pointer and touch events |
+| Game over, play the same seed again, new run, best scores after a reload | Pass | End-to-end tests at both sizes; a damaged stored score is dropped, and the game still plays when the device refuses storage |
 | Keyboard-only play with visible focus | Pass | Chromium, desktop size |
 | Reduced motion; device setting followed | Pass | No sweep, no trails; every link, site, label and icon still drawn |
 | Play without WebGL; WebGL lost mid-run | Pass | Automatic fallback to Canvas 2D; both renderers report the same scene for the same step |
 | No green, no red | Pass | Every authored color is outside both hue bands. Census of screenshots in both renderers at five moments and both sizes: 0 pixels in either band. |
 | Text contrast and size; every control named | Pass | Contrast at least 4.5 to 1; no text under 16 px at 1920×1080 or 11 px at 844×390; every control on every screen has a readable name |
 | Plays offline as plain files | Pass | A whole run with the network cut; no request to another host |
-| Code review of the source, tools and tests | Done | `/code-review` at level high found 10 faults; all are fixed, and each fix that could have a test has one that fails without it. The reviewer was a second session of the same model, not a person. `docs/verification/results.md` |
+| Code review of the source, tools and tests | Done | Three rounds of `/code-review` at level high: 30 findings, 27 fixed, 3 left with their reasons. Each fix that could have a test has one that fails without it. The third round's fixes were tested but not reviewed again. The reviewers were other sessions of the same model, not people. `docs/verification/results.md` |
 | `dist/` matches the source | Pass | `npm run verify:dist`: 13 files equal a fresh build, in the working folder and in a fresh clone |
 | Seeded-run videos at both sizes | Pass | `docs/verification/run-stage-1-844x390.mp4`, `run-stage-1-1920x1080.mp4`: the scripted player on seed `stage-1`, 7,302 delivered in 6:51 in both, equal to the same run in Node with no browser. Not a person's run. |
-| Fresh copy: serve `dist/`, install, test, build, end-to-end | Pass | From a clone of this branch in an empty folder: `dist/` served as it is, then `npm ci`, 113 unit tests, the build, `verify:dist` and 72 end-to-end tests. Run by the build agent on the build machine, not by another engineer. |
+| Fresh copy: serve `dist/`, install, test, build, end-to-end | Pass | From a clone of this branch in an empty folder: `dist/` served as it is, then `npm ci`, 124 unit tests, the build, `verify:dist` and 74 end-to-end tests. Run by the build agent on the build machine, not by another engineer. |
+| `ARCADE.md` Runtime section | Confirmed | `node tools/confirm-runtime.mjs` runs the file's own start command, opens the URL with no test switches, plays a run to game over offline and reloads: 8 of 8 claims hold |
 | Frame time | Recorded, not a pass | Headless Chromium on the build machine, where WebGL runs in software: 36 frames a second at 1920×1080 with WebGL, 60 with the fallback and at phone size. Main-thread work is under 1 ms a frame. This is not a phone measurement. |
 | Played by a person; a tester explains a bad cost change from the screen alone | **Not run** | Needs a person (SC-011, SC-013) |
 | 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone (SC-012) |
@@ -180,7 +184,7 @@ Found a wrong route? Open an issue with the seed, the links and costs, the two s
 
 ## Credits
 
-Created by Elliot Conner with Claude Code. Workshop by John Capobianco, Joksan Flores, and Elliot Conner. Adapted from the [NAF AC6 workshop materials](https://github.com/automateyournetwork/NAF_AC6) (Apache-2.0), using [GitHub Spec Kit](https://github.com/github/spec-kit).
+Created by Elliot Conner with Claude Code. Workshop by John Capobianco, Joksan Flores, and Elliot Conner. Adapted from the [NAF AC6 workshop materials](https://github.com/automateyournetwork/NAF_AC6) (Apache-2.0) and [Networking Video Game Starter Kit](https://github.com/automateyournetwork/NetworkingVideoGameStarterKit), using [GitHub Spec Kit](https://github.com/github/spec-kit).
 
 **Assets and dependencies:** city positions, coastline and lakes from [Natural Earth](https://www.naturalearthdata.com/) data (public domain). [IBM Plex](https://github.com/IBM/plex) Sans and Mono (SIL Open Font License 1.1), bundled through the `@fontsource` packages; the licence text is in `public/licenses/`. The hero image is a frame rendered by the game itself. Everything else is original to this project.
 

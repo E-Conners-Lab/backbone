@@ -236,7 +236,7 @@ Each row names the automated check that produced the result. "Pass" means the ch
 
 Not covered by any check: browsers other than Chromium, screen readers, a real phone, and a person playing at all.
 
-## Code review (T068, 2026-11-10T17:27Z)
+## Code review (T068, 2026-11-10T17:25Z)
 
 `/code-review` at level high over `src`, `tools` and `tests`, run by a forked reviewer: a second session of the same model that had not written the code, not a person. It returned ten findings. All ten were judged real and all ten were fixed. Two of the fixes were themselves faulted by the second review below, and corrected.
 
@@ -255,7 +255,7 @@ Not covered by any check: browsers other than Chromium, screen readers, a real p
 
 What this review is not: a person's review, a security audit, or a review of the specification documents.
 
-## Second code review, of the fixes (2026-11-10T18:07Z)
+## Second code review, of the fixes (2026-11-10T18:04Z)
 
 The owner's rule is to review after a significant change. `/code-review` at level high was run again, by a new forked reviewer on the same model, over the sixteen files the first round's fixes had touched. It returned ten more findings. Three were reproduced by the reviewer with a probe against the game's state. Nine are fixed; one is left and recorded.
 
@@ -274,15 +274,37 @@ The owner's rule is to review after a significant change. `/code-review` at leve
 
 After this round: `npm test` 121 of 121; `npm run test:e2e` 74 pass, 4 skipped by design; `npm run verify:dist` passes at commit `7401e30`.
 
-## Videos (T062, SC-005; recorded 2026-11-10T17:47Z and 17:49Z from the final build)
+## Third code review, and where reviewing stopped (2026-11-10T18:36Z)
+
+A third `/code-review` at level high, over the ten files the second round had changed, was already running when the owner said: "if the reviews keep coming back and finding 10 things and 10 things, and they're not of importance, we don't need to keep reviewing for the sake of reviewing." It returned ten findings and named three more it had cut. They were sorted by whether a player, or the evidence this file rests on, would feel them. Eight are fixed and two are left, as are the three it had cut. **No fourth review was run**, so the fixes of this round have been tested but not reviewed.
+
+| # | Finding | Decision | Check |
+| --- | --- | --- | --- |
+| 1 | While the game runs, setting a cost left the old number in the field, and a second Enter put the old cost back. | **Fixed**, with 4. A player would meet this in ordinary play. | `tests/e2e/us1-shape.spec.ts` AC4 at both sizes (confirmed by taking the fix out); `tests/unit/game.test.ts` |
+| 4 | While the game runs, two changes inside one 50 ms step were each judged against the same old state: a held "+" lost steps, a second Upgrade with one in stock was announced and then refused. The root of 1. | **Fixed.** Every change now takes one path: checked at once against the planned world, applied by the next step. The separate path for a running game is gone, which also made the code smaller. | `tests/unit/game.test.ts`, two tests |
+| 9 | The HUD said "after pending" beside the fiber figure whenever anything was pending, even a cost change. | **Fixed**: only while time stands still, and only on a figure a pending change alters. | Existing end-to-end tests read the HUD text |
+| 8 | Nothing limited panning: the map could be dragged out of sight, with no way back but panning or a new run. The hand-built v1 had a limit. | **Fixed**: the view's centre stays inside the box the map was fitted to, so zooming out always brings the sites back. | `tests/unit/camera.test.ts` |
+| 5 | `tools/frr_check.py` took an OSPF route as FRR's answer even if FRR had not selected or installed it, and counted next hops it was not forwarding on. | **Fixed**: only a selected and installed route, through active next hops in the forwarding table, counts. This is the tool behind the README's "matches a real OSPF implementation". | Rerun: pass, 21 of 21, output identical to the earlier runs |
+| 6 | The same tool ran every routing case on topology T1 whatever the case named. All current cases name T1. | **Fixed**: each case runs on the topology it names. | Same rerun |
+| 3 | `tools/make-card.mjs` accepted a step that is not a number and never checked the run reached the step, so the card image could silently be of the wrong moment. | **Fixed**: bad arguments are refused; the tool stops if the run is over or short of the step. The card image is an Arcade requirement. | Read; the card was not made again |
+| 10 | Two exported functions were used nowhere; one read like a check that did not exist. | **Fixed**: both removed. | Type-check |
+| 2 | `tools/frr_check.py` waits until FRR's table agrees with the case, and does not read back that FRR took the change. A case whose expected routes equal the table from before the change would pass on stale state. It also reports hello and dead timers from its own constants. | **Left.** No current case is of that kind: every changed case differs from the base, so the tool does wait for the real change. Adjacencies Full on every link show both ends agree on timers, though not what they are. Worth doing before a case of that kind is added. | None |
+| 7 | With a link's options open, clicking a tool button with a pointer leaves focus on that button after Escape, so Space presses the button instead of pausing. | **Left.** One click on the map, or any key that is not Space, puts it right; the keyboard path is correct and tested. | None |
+| – | Cut by the reviewer's own cap: a type-check comment on the wrong line in the FRR tool (mypy is not used here); the coastline is projected again every frame; the link's name and the refusal text are each built in more than one file. | **Left.** None changes what the game does. Frame work is under 1 ms. | None |
+
+After this round: `npm test` 124 of 124; `npm run test:e2e` 74 pass, 4 skipped by design; `npm run verify:dist` passes at commit `9b813ab`; `python3 tools/frr_check.py` pass, 21 of 21, on its fourth run.
+
+**The three rounds together:** 30 findings. 27 fixed, 3 left (one in round two, two in round three), each with its reason above. The three further points the third reviewer cut are left too.
+
+## Videos (T062, SC-005; recorded 2026-11-10T18:48Z and 18:50Z from the final build, commit `9b813ab`)
 
 `npm run record` plays the scripted player on seed `stage-1` in the built game, with the WebGL renderer, from the start to game over and through the time-lapse, at 4 times real speed. The speed is a multiple of the same fixed step, so it is the same run.
 
 | | 844×390 (touch device profile) | 1920×1080 |
 | --- | --- | --- |
 | File | `run-stage-1-844x390.mp4` | `run-stage-1-1920x1080.mp4` |
-| Size, length | 1,952,961 bytes, 114 s, H.264 | 5,241,329 bytes, 115 s, H.264 |
-| SHA-256 | `e5998bfe8f3184a41dc7b46c354f663d39f777025528166840a216997497b6cf` | `0c00443de2380c6dd99a647d4f694c21595346e7a1326107dc04c73392b655d8` |
+| Size, length | 1,956,995 bytes, 114 s, H.264 | 5,229,596 bytes, 115 s, H.264 |
+| SHA-256 | `c794b242256b7fc6646ffbd31ca61240c97a8b5f98bef9a14e1bd3c6cbb32bb7` | `04f22b5a3a3b6746f38e181b4e11745727b9cd79e2d60ca456f96187f6aa8c27` |
 | Delivered | 7,302 | 7,302 |
 | Time survived | 6:51 (8,239 steps) | 6:51 (8,239 steps) |
 | Dropped: full queue, cut, no route | 108, 14, 0 | 108, 14, 0 |
@@ -292,46 +314,10 @@ After this round: `npm test` 121 of 121; `npm run test:e2e` 74 pass, 4 skipped b
 
 **Second, independent check.** The same seed played by the same scripted player in Node, with no browser and no renderer (`node tools/run-ts.mjs tools/bot-runs.ts stage-1`): 6:51, 7,302 delivered, drops 108, 14 and 0. All three runs agree.
 
-**Looked at.** One frame from late in the phone video (6:19) and two from the desktop video (3:59 and the last second) were opened and read: the HUD numbers match the table, all twelve sites sit between the HUD and the control bar, congested links are amber and dashed with a warning icon, and the game-over card shows the same score, time, seed and drop counts.
+**Looked at.** One frame of the phone video (1:59) and one of the desktop video (6:39) were opened and read: the HUD numbers are consistent with the run, every site sits between the HUD and the control bar, congested links are amber and dashed with a warning icon, and the cut link DEN–PHX is magenta and dashed with its cut icon.
 
 **Result: SC-005 pass** for the scripted player. It is not a person's run.
 
-Two things seen in the frames and left as they are: on the game-over screen the result card covers the western sites while the time-lapse plays behind it, and a cost label can sit partly under a site's name where a link leaves the site at a shallow angle.
+Seen in the frames and left as they are: on the game-over screen the result card covers the western sites while the time-lapse plays behind it, and a cost label can sit partly under a site's name where a link leaves the site at a shallow angle.
 
-The first recording, from build `68c4588`, gave the same numbers. It showed a site under the control bar at phone size, which led to the framing fix; both videos were then recorded again and the first pair was replaced.
-
-## Fresh copy (T069, SC-010; 2026-11-10T17:54Z)
-
-The branch was cloned into an empty folder (`git clone --branch speckit-rebuild --single-branch`), at commit `69aa8d4`, and the README's commands were run there in order. Nothing was copied in from the working folder; Playwright's Chromium was already in the machine's cache.
-
-| Step | Result |
-| --- | --- |
-| The clone is clean and has no `node_modules` | Pass |
-| `python3 -m http.server 8791 --bind 127.0.0.1 --directory dist`, before anything is installed | Pass: the page served equals the clone's `dist/index.html`, and the script, the stylesheet and the hero image it names answer 200 |
-| `npm ci` | Pass: 45 packages |
-| `npm test` | Pass: 113 of 113 |
-| `npm run build` | Pass |
-| `npm run verify:dist` | Pass: `dist/` matches a fresh build, 13 files, and the build left `dist/` unchanged in the clone |
-| `npm run test:e2e` | Pass: 72 pass, 4 skipped by design, 0 fail. This includes a whole run played with the network cut. |
-| No tracked file changed by any of the above | Pass |
-
-What this does and does not show: the commands in the README work from a fresh copy on the build machine (macOS, Node 26.3.1). They were run by the build agent, not followed by another engineer, and not on another machine or operating system. `npm run record` and `python3 tools/frr_check.py` were not run in the clone; they were run in the working folder.
-
-## Final run (2026-11-10)
-
-The code and the build output were last changed in commit `24ea96b`. Commits after it change records only.
-
-| Check | Where | Result |
-| --- | --- | --- |
-| `npm test` | Working folder at `24ea96b`; clone of `69aa8d4` | 113 of 113 pass, 16 files, both times |
-| `npm run test:e2e` | Working folder at `24ea96b`; clone of `69aa8d4` | 72 pass, 4 skipped by design, 0 fail, both times |
-| `npm run verify:dist` | Working folder at `24ea96b`; clone of `69aa8d4` | `dist/` matches a fresh build, 13 files, both times |
-| `python3 tools/frr_check.py` | Working folder, with the tool as changed by the review | Pass, 21 of 21; lab removed |
-| `npm run record` | Working folder, final build | Both videos: 7,302 delivered in 6:51 |
-| `npm audit`; gitleaks over the working tree | Working folder, 2026-11-10 (before the review fixes, which added no dependency) | 0 vulnerabilities; no leaks |
-
-The four skipped end-to-end tests are each run at the other screen size: touch gestures (AC15) run at phone size only; mouse and wheel (AC16), keyboard-only play (AC17) and the resize test run at desktop size only.
-
-**Failed:** nothing in the final run.
-
-**Not verified** (needs a person or equipment the build did not have): SC-011, SC-012 and SC-013; a person playing the rebuilt game at all; browsers other than Chromium; screen readers; a real phone; frame rate on real graphics hardware; the README followed by another engineer.
+The videos were recorded three times. The first pair (build `68c4588`) showed a site under the control bar at phone size, which led to the framing fix. The second pair (`24ea96b`) predated the second and third review rounds. This pair is from the final code. All three gave the same score, time and drop counts: the review fixes changed how the game is drawn and handled, not what the simulation computes.

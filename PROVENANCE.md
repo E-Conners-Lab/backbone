@@ -180,7 +180,7 @@ did not witness any of it.
 | Sessions | One. It waited for the owner from about 04:25Z to about 15:05Z on 2026-11-10. | Timestamps in the capture log |
 | Wall time | unknown | Start not recorded; the session includes the wait above |
 | Token usage / cost | unknown | Not measured by the agent |
-| Helper models and sub-agents | One: the `code-review` skill ran its review in a forked session of the same model, `claude-fable-5-2` (236,865 tokens and 26 tool calls as reported by the harness). No other model and no other sub-agent. | The fork's own transcript names the model; step R19 |
+| Helper models and sub-agents | The `code-review` skill ran three reviews, each in a forked session of the same model, `claude-fable-5-2`: 236,865 tokens and 26 tool calls; 178,165 and 36; 181,368 and 22, as reported by the harness. No other model and no other sub-agent. | The forks' own transcripts name the model; steps R19, R24 and R26 |
 | MCP servers | The same servers as listed for v1 are connected. None has been called. | Tool names visible to the agent |
 
 ## Human prompts in the rebuild
@@ -193,6 +193,7 @@ not prompts, and are not counted.
 | 1 | 2026-11-10, before 04:14Z | `/speckit-constitution` with the lab's step 1 text |
 | 2 | 2026-11-10, about 04:15Z | Asked whether the project could be finished unattended overnight |
 | 3 | 2026-11-10, about 15:05Z | "go, commit as you go, take your recommendations" |
+| 4 | 2026-11-10, about 18:28Z | Keep going; stop reviewing for its own sake if the findings are not important; make sure the documentation is in the state John's repo asks for, so the game can be sent to his Arcade |
 
 ## Sources read in the rebuild
 
@@ -209,6 +210,10 @@ not prompts, and are not counted.
 | RFC 2328 and RFC 2991 | `curl` from rfc-editor.org into the session scratch folder, for the text review | Same SHA-256 as recorded above for v1 |
 | The owner's saved lab note on FRR in Docker on this machine | The agent's memory folder for this project | Used for the image name and the health gate |
 | `README.md`, `ARCADE.md`, `docs/spec-map.html` and `docs/secure-build-checklist.md` as they described the hand-built v1 | Read before rewriting them | Commit `5fd0490` |
+| The Arcade's `ARCADE.md` template: `WORKSHOP/LAB/StarterKit/ARCADE.md` in `automateyournetwork/NAF_AC6` at commit `b77da71` (still the repo's latest on 2026-11-10), and the copy the Arcade page tells builders to fetch, `automateyournetwork.com/arcade/ARCADE.md` | `curl` with a generic client name, into the session scratch folder | Both SHA-256 `214391d381689c37277f310f12e57e19de58b2def6bc8c22751ffd414fe17eed`: the same file |
+| The finished example the lab guide points to, `WORKSHOP/LAB/Examples/PerHopWorks/ARCADE.md` | Same | SHA-256 `f4e9b90c2a37e9eec2af4f56d92f3884c2a43ba86d05cda3cced5b7ac860031d` |
+| The Arcade page, `automateyournetwork.com/arcade/`: how a game gets listed and the prompt it gives builders | `curl`, read as text, 2026-11-10 | Not hashed; a live page |
+| The game repository's own visibility, default branch and licence on GitHub | `gh repo view E-Conners-Lab/backbone` | Public, default branch `main`, Apache-2.0 |
 
 ## Rebuild steps and checks
 
@@ -232,19 +237,22 @@ not prompts, and are not counted.
 | R16 | 2026-11-10T17:06Z | RFC 2328 and RFC 2991 downloaded again with `curl` from rfc-editor.org for the text review | SHA-256 equal to the hashes recorded for the hand-built v1 (`981690e2…f50c`, `7ed2e595…1e7f`). RFC 2328 sections 16.1, 16.1.1, 16.8, 9.2, 13.2, C.3 and A.4.2 read; RFC 2991 searched, not read in full. |
 | R17 | 2026-11-10T17:06Z | `python3 tools/frr_check.py`: T1 and T2 as FRR routers in Docker, image `quay.io/frrouting/frr:10.7.1` (digest `sha256:e995beaa50fdc9edb35eadcfefa29b7f062cc06f2b812613789b68fa541554d2`, arm64, already on the machine), hello 1 s, dead 4 s | Pass on the first attempt: all adjacencies Full, 21 of 21 compared routes match. Lab removed afterwards. |
 | R18 | 2026-11-10T17:06Z | Phase 8: `npm run test:e2e` with the WebGL renderer as default; hero art by `tools/make-card.mjs`; frame time read from the page in headless Chromium (WebGL on SwiftShader) | Census zero in both renderers. One suite run had 1 failure of 64: a race in a test, fixed. Final run recorded below. |
-| R19 | 2026-11-10T17:27Z | `/code-review high src tools tests` (Claude Code skill, run by a forked reviewer on the same model); fixes by the build agent | 10 findings, all fixed, none left. Details in `docs/capture-log.md` step 70 and `docs/verification/results.md`. |
+| R19 | 2026-11-10T17:25Z | `/code-review high src tools tests` (Claude Code skill, run by a forked reviewer on the same model); fixes by the build agent | 10 findings, all fixed, none left. Details in `docs/capture-log.md` step 70 and `docs/verification/results.md`. |
 | R20 | 2026-11-10T17:44Z | After the review fixes: `npm test`, `npm run test:e2e`, `python3 tools/frr_check.py` (second run, same image) | Unit 113 of 113. End-to-end 72 pass, 4 skipped by design. FRR: pass, 21 of 21, output identical to the first run; lab removed. |
 | R21 | 2026-11-10T17:49Z | `npm run record` on the final build; `node tools/run-ts.mjs tools/bot-runs.ts stage-1` as the second check; `ffprobe` and `ffmpeg` to read the files and pull three frames | Both videos 7,302 delivered at 6:51; Node run equal. SHA-256 of the videos in `docs/verification/results.md`. |
 | R22 | 2026-11-10T17:54Z | Fresh-copy check on a clone of `69aa8d4`: `npm ci` (45 packages from the npm registry, by the lockfile), `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e` | All pass: 113 unit, 72 end-to-end with 4 skipped by design, `dist/` equal to a fresh build. |
 | R23 | 2026-11-10T17:58Z | `docs/spec-map.png` rendered from `docs/spec-map.html` with Playwright's Chromium. The page fetched IBM Plex from fonts.googleapis.com and fonts.gstatic.com (a generic headless browser request, nothing identifying) | 3840×3892 PNG. Looked at. |
-| R24 | 2026-11-10T18:07Z | Second `/code-review high`, a new forked session of `claude-fable-5-2`, over the files changed by the first round (178,165 tokens and 36 tool calls as reported by the harness); fixes by the build agent | 10 findings: 9 fixed, 1 left and recorded. `docs/verification/results.md`. |
+| R24 | 2026-11-10T18:04Z | Second `/code-review high`, a new forked session of `claude-fable-5-2`, over the files changed by the first round (178,165 tokens and 36 tool calls as reported by the harness); fixes by the build agent | 10 findings: 9 fixed, 1 left and recorded. `docs/verification/results.md`. |
 | R25 | 2026-11-10T18:26Z | After the second round: `npm test`, `npm run test:e2e` (twice), `npm run verify:dist`, `python3 tools/frr_check.py` (third run) | Unit 121 of 121. End-to-end 74 pass, 4 skipped by design, after one test helper was rewritten. `dist/` matches at `7401e30`. FRR: pass, 21 of 21. |
+| R26 | 2026-11-10T18:36Z | Third `/code-review high`, a third forked session of `claude-fable-5-2` (181,368 tokens and 22 tool calls as reported by the harness); triage and fixes by the build agent | 10 findings: 8 fixed, 2 left; 3 more the reviewer cut, left. No fourth review, by the owner's word. |
+| R27 | 2026-11-10T18:46Z | After the third round: `npm test`, `npm run test:e2e`, `npm run verify:dist`, `python3 tools/frr_check.py` (fourth run), `node tools/confirm-runtime.mjs` | Unit 124 of 124. End-to-end 74 pass, 4 skipped by design. `dist/` matches at `9b813ab`. FRR: pass, 21 of 21, identical output. Runtime section confirmed. |
 
 ## Changes of direction by the owner in the rebuild
 
 | When | What |
 | --- | --- |
 | 2026-11-10, about 15:05Z | Dropped the review between lab steps: "go, commit as you go, take your recommendations". K1–K5 are decided as the agent recommended; see the capture log's questions table. |
+| 2026-11-10, about 18:28Z | After two code reviews of ten findings each: "if the reviews keep coming back and finding 10 things and 10 things, and they're not of importance, we don't need to keep reviewing for the sake of reviewing." And the goal for the rest: the documentation "buttoned up according to how John's repo mentions it, in order to send it to his arcade". A third review was already running; its findings are fixed only where they matter, and no fourth is run. |
 
 ## Decisions the agent made without asking in the rebuild
 

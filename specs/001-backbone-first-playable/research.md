@@ -71,6 +71,7 @@ Versions were read on 2026-11-10 with `node --version`, `npm --version`, `docker
 - **Decision**: While paused, each command is checked against a copy of the world that already holds the earlier pending commands. Accepted commands are shown as pending and are all sent in the first step after resume, so there is one route calculation. The route table in the inspector reads the real world, not the copy.
 - **Rationale**: This is AC14 and FR-024 as written, and it keeps FR-025: nothing computed from a pending change is shown except the budget it will spend.
 - **Alternatives considered**: Applying changes at once while paused and freezing time (the routes would be visible before resume, which is a preview).
+- **As built** (after the code reviews of 2026-11-10): the same path is used at all times, not only while paused. Every command is checked at once against the copy and is pending until the next simulation step applies it: at most one step while the game runs, until resume while paused, and until the choice while a reward waits (FR-016). The copy stays the planned world, which the budget and a link's options read, until that step has run. "After pending" is shown only while time stands still. The view's centre is also kept inside the box the map was fitted to, so the map cannot be panned out of sight.
 
 ## R12 · Storage
 
