@@ -36,6 +36,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10, about 15:05 | Owner's go-ahead: finish the rebuild without step-by-step review, commit as you go, take the agent's recommendations for K1–K5. Pushing was not mentioned, so nothing is pushed. |
 | 2026-11-10T15:11Z | Lab step 1 committed; constitution amended to version 1.1.0 with the owner's decisions K1 and K2; the rebuild's part of `PROVENANCE.md` started (K5) |
 | 2026-11-10T15:19Z | Lab step 2 done: `/speckit-specify` wrote `specs/001-backbone-first-playable/spec.md` |
+| 2026-11-10T15:22Z | Lab step 3 done: `/speckit-clarify`, five questions, all answered by the build agent for the owner's later review |
 
 ## Steps and results
 
@@ -90,6 +91,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 49 | Start the rebuild's part of `PROVENANCE.md` (K5) | Done |
 | 50 | Lab step 2, `/speckit-specify`, with the lab's prompt plus one sentence naming K1, K3, L1 and L2 | Done. `specs/001-backbone-first-playable/spec.md`: five stories, AC1–AC23 kept and AC24–AC25 added for link removal (K1), both model tables and cases 1–12 carried (L2), the drop meter rule stated exactly with its three numbers (L1), green and red defined by hue bands (K3). No clarification markers. Spec Kit created no branch, so work stays on `speckit-rebuild`. |
 | 51 | Independent check that the spec preserves the approved input | Pass: 246 pieces compared with `StarterKit/SPEC.md`. First run failed on three acceptance criteria whose rewording had dropped words (AC14, AC15, AC22); their wording was restored and the check passes. Five table cells differ on purpose and are declared in the check. |
+| 52 | Lab step 3, `/speckit-clarify`. The owner was away, so the agent answered its own five questions from the approved decisions and marked each answer as its own. | Done. Recorded in the spec's Clarifications section: the inspector also shows a selected router's table (new AC26, from LO1's evidence line); router IDs follow the order of appearance and are shown in the inspector; a link serves before it accepts arrivals in a step (the only order that gives case 9 its hand-worked 40, 8 and 12); verification covers Chromium only; v1 reward offers are the same two choices every time (K6). Checklist still 16 of 16. Preservation check passes with two more declared cells. |
 
 ## Gotchas
 
@@ -136,9 +138,15 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Is it ready to post to the Arcade? | Owner | Agent: the game was ready; three owner decisions were blocking. All are now made. |
 | Conflicts K1–K5 between the constitution and the approved spec or the state of the repository | Agent | Owner, 2026-11-10: take the agent's recommendations. K1: amend C2 to name link removal and reward choice, and give removal an acceptance criterion. K2: the learning sequence is the campaign's order. K3: hue bands in the spec, no authored color inside them, the rendered-frame figure reported as a number. K4: the owner re-confirms consent after playing the rebuilt game; the agent leaves the field alone. K5: a rebuild part in `PROVENANCE.md`. |
 | If I give permission to finish the project overnight, can you, or will I need to approve things during the night? | Owner | Agent: the six remaining lab steps and the build can run unattended only if the session does not stop for permission prompts, which the agent cannot see. Waiting for the owner in any case: `consent_to_publish`, the merge to `main`, and the checks that need a person. Needed before starting: the go-ahead, whether the agent may commit and push on this branch, and answers or defaults for K1–K5. Permission not yet given; step 2 not started. Owner, 2026-11-10: "go, commit as you go, take your recommendations". |
+| Clarify 1: does the pause inspector show the lowest-cost path, as LO1's evidence assumes, or only the links? | Agent (clarify step) | Agent, for the owner's review: both. Selecting a site lists that router's table in force, without pending changes. New AC26. |
+| Clarify 2: how does a site get its router ID, and where can the player see it? | Agent (clarify step) | Agent, for the owner's review: in order of appearance, from 1, shown beside the site code in the pause inspector. No approved decision covered it. |
+| Clarify 3: in one simulation step, does a link serve before or after it accepts arrivals? | Agent (clarify step) | Agent, for the owner's review: it serves first. Worked by hand, only that order gives case 9 exactly 40 served, 8 queued, 12 dropped; the other order gives 40, 7 and 13. |
+| Clarify 4: in which browsers must v1 be verified? | Agent (clarify step) | Agent, for the owner's review: Chromium only, as in the hand-built v1; other browsers are listed as not verified. |
+| Clarify 5: does a v1 reward offer vary with the seed? | Agent (clarify step) | Agent, for the owner's review: no, every offer is the same two choices. See K6. |
 
 ## Open items
 
+- **K6, owner decides.** The approved input spec says the seed decides the reward offers (R10, Q2, the Mode row). The approved plan's tuning table gives one offer, "+3,000 km of fiber or +1 upgrade", and v1 has only two rewards. The agent's clarification follows the plan: every v1 offer holds the same two choices. If the owner wants offers that differ by seed in v1, the spec and tasks need a rule for what varies.
 - A full showcase run of the hand-built v1 was recorded to game over (seed `2328`, 8:56, 15,134 delivered, 197 inputs, none missed). The owner chose to keep the video private, so it is not in this repository. An earlier entry saying no finished video exists is **corrected** by this one.
 - Branch `showcase-video` on the remote held that video. The agent's attempt to delete the remote branch was blocked by its permission settings. **Resolved:** the owner deleted the remote branch on 2026-11-09.
 - Spec Kit rebuild: lab step 1 (constitution) is done. Steps 2 to 7 run without a review between them, by the owner's go-ahead of 2026-11-10; the owner reviews the whole rebuild afterwards.

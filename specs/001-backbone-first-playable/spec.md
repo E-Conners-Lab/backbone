@@ -33,6 +33,18 @@ The player is the network architect for a growing region. Sites appear over time
 | LO3 | Design redundancy so one cut leaves no site without a path | Survive fiber cuts | No site goes dark after a single cut |
 | LO4 (later release) | Use equal costs to share load, knowing the split happens at each hop | Enable equal-cost sharing and tune costs to equality | Utilization on parallel paths matches the per-hop split |
 
+## Clarifications
+
+### Session 2026-11-10
+
+The owner was away and had said to proceed without step-by-step review. Every answer below was given by the build agent, from the owner's approved decisions where one applies, and waits for the owner's review.
+
+- Q: Does the pause inspector show the lowest-cost path between sites, as the evidence for learning outcome LO1 assumes, or only the table of links? → A: It shows both. Selecting a site lists that router's table in force: every destination with its total cost and next hop. Pending changes are not included until play resumes. (Build agent, from LO1's evidence line in the approved input: "Pulses follow the path the inspector lists as lowest cost".)
+- Q: How does a site get its router ID, and where can the player see it? → A: Router IDs are whole numbers given in the order the run introduces its sites, starting at 1, and each site's ID is shown beside its code in the pause inspector. (Build agent. No approved decision covers it. The ID decides every tie while one route is kept, so C2 requires it to be visible.)
+- Q: Inside one simulation step, does a link direction serve its queue before or after it accepts the packets arriving in that step? → A: It serves first, then accepts arrivals. (Build agent, from case 9: worked by hand, only this order gives exactly 40 served, 8 queued and 12 dropped. The other order gives 40, 7 and 13.)
+- Q: In which browsers must v1 be verified? → A: Chromium only. Other browsers are not verified in v1 and are listed as a limit in the README. (Build agent, from the hand-built v1's recorded practice in `PROVENANCE.md`: "Not verified: any browser other than Chromium".)
+- Q: Does a reward offer in v1 vary with the seed, or is it always the same two choices? → A: Always the same two choices: a fixed amount of fiber, or one capacity upgrade. The offer is still produced by the simulation's seeded rules, so it stays deterministic (R10). (Build agent. The approved input is not consistent here: R10, Q2 and its Mode row say the seed decides the offers, while the approved plan's tuning table gives a single offer, "+3,000 km of fiber or +1 upgrade", and v1 has only two rewards to offer. This answer follows the plan and is flagged for the owner as K6 in `docs/capture-log.md`.)
+
 ## User Scenarios & Testing *(mandatory)*
 
 All five stories carry priority P1 in the approved input: v1 needs every one of them. Their order below is the order of work, so that routing correctness and the core loop exist before any visual effect (C7).
@@ -102,6 +114,9 @@ As a learner, I stop the game whenever I want, read every number, make my change
 1. **AC12** — **Given** a run in progress, **When** I press Space (desktop) or the pause control (any device), **Then** the game pauses, and the same action resumes it, at any time during a run.
 2. **AC13** — **Given** the game is paused, **When** I look at the map and the inspector, **Then** every link's cost, capacity, utilization and state is readable on the map and in the inspector's text table.
 3. **AC14** — **Given** the game is paused, **When** I make changes, **Then** changes made while paused are shown as pending and all apply together on resume.
+4. **AC26** — **Given** the game is paused, **When** I select a site in the inspector, **Then** I see that router's table in force: every destination with its total cost and next hop, not including pending changes.
+
+AC26 is new in this file. It comes from the clarification of 2026-11-10 about learning outcome LO1.
 
 ---
 
@@ -216,7 +231,7 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 **Traffic, capacity and drops**
 
 - **FR-006 (R3 Traffic)**: Each active site MUST send packets to other active sites at rates that grow over the run (*tunable*). Emission MUST be decided by the seed alone.
-- **FR-007 (R4 Capacity)**: Each direction of a link is independent. It MUST serve packets at its capacity (*tunable* tiers) from a first-in-first-out queue of fixed length (*tunable*). A packet that arrives at a full queue MUST be dropped. Senders never slow down.
+- **FR-007 (R4 Capacity)**: Each direction of a link is independent. It MUST serve packets at its capacity (*tunable* tiers) from a first-in-first-out queue of fixed length (*tunable*). A packet that arrives at a full queue MUST be dropped. Senders never slow down. Inside one simulation step a link direction first serves from its queue and then accepts the packets arriving in that step.
 - **FR-008 (R5 Load display)**: The utilization of a link direction is packets served divided by capacity, averaged over a short window (*tunable*). Each link MUST show one of four load states: nominal, busy (at or above a *tunable* threshold), congested (amber, at or above a higher *tunable* threshold) or dropping (amber plus a drop indicator, when a packet was refused within the window). The map shows the busier direction of a link. The inspector lists both directions.
 - **FR-009 (R6 Drops)**: A drop is exactly one of: (a) a packet refused by a full queue; (b) a packet on a link, or queued for it, when that link is cut or removed; (c) a packet with no route to its destination, at its source or at a router along the way ("no route"). Every drop MUST be counted once and MUST add to the drop meter.
 - **FR-010 (R7 Drop meter)**: The drop meter holds a whole number from 0 up to its size. Every drop adds 1. When a full drain delay of simulated time has passed since the last drop, the meter falls by 1, and by 1 again after each further drain interval, until the next drop or until it reaches 0. Any drop restarts the drain delay. Simulated time does not pass while the game is paused. The run ends at the simulation step in which the meter reaches its size. **v1 values: size 100 drops, drain delay 3 seconds, drain interval 1 second.** These three numbers are tuning constants: they may change for balance, and any change is recorded here so that the rule stays exact.
@@ -228,9 +243,9 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 - **FR-013 (Q5 Removing a link)**: The player can remove a link that is up. Removal returns the link's fiber in full, forfeits the upgrades spent on it, and drops the packets on it or queued for it (FR-009b). A link that is cut MUST NOT be removable until it is repaired.
 - **FR-014 (Capacity upgrades)**: Capacity comes in tiers. Applying an upgrade spends one upgrade from the player's stock and raises the link one tier in both directions. Its cost is unchanged (S6). Without an upgrade in stock, or on a link at the top tier, the attempt changes nothing.
 - **FR-015 (S6 Default cost)**: A new link has cost 10.
-- **FR-016 (R10 Rewards)**: At fixed intervals of simulated time (*tunable*) the game pauses and the player chooses one of the offered rewards: more fiber, or one capacity upgrade. The offer is decided by the seed. The choice has no time limit.
+- **FR-016 (R10 Rewards)**: At fixed intervals of simulated time (*tunable*) the game pauses and the player chooses one of the offered rewards. In v1 every offer holds the same two choices: a fixed amount of fiber (*tunable*), or one capacity upgrade. The offer therefore does not vary with the seed, and stays deterministic. The choice has no time limit.
 - **FR-017 (R11 Fiber cuts)**: At times decided by the seed, one link that is up is cut for a period and then restored. The cut and the restore each trigger FR-001.
-- **FR-018 (Sites)**: A run starts with a few sites of the region and gains more over time, as decided by the seed. A new site is marked as new and neither sends nor receives traffic until its grace period (*tunable*) ends.
+- **FR-018 (Sites)**: A run starts with a few sites of the region and gains more over time, as decided by the seed. A new site is marked as new and neither sends nor receives traffic until its grace period (*tunable*) ends. Router IDs are whole numbers given in the order the run introduces its sites, starting at 1.
 
 **The run**
 
@@ -240,7 +255,7 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 - **FR-022 (Seeds)**: A run starts from a seed the player types or from a random one. The seed is shown during the run and at its end so the run can be repeated. A typed seed is 1 to 24 letters, digits or hyphens.
 - **FR-023 (Best scores)**: The best five scores are stored on the device and shown on the welcome screen with their seeds.
 - **FR-024 (Pause)**: The player can pause and resume at any moment of a run. While paused every tool works. Changes made while paused are queued, shown as pending, and all take effect together when play resumes, with one route calculation. The game also pauses when its page is hidden.
-- **FR-025 (No preview)**: The game MUST NOT preview the loads that a pending change will produce. Predicting them is the skill.
+- **FR-025 (No preview)**: The game MUST NOT preview the loads or the routes that a pending change will produce. Predicting them is the skill.
 - **FR-026 (End of run)**: A full drop meter ends the run. The end screen shows traffic delivered, time survived, the seed and the time-lapse, and offers a new run. Restarting is free.
 - **FR-027 (Welcome)**: A fresh load shows the welcome screen with the hero art, the best scores, the seed field and the one-card briefing: "Traffic takes the lowest total cost. You shape the network; you never steer packets."
 - **FR-028 (About the model)**: A panel reachable from the welcome and pause screens states F1–F8 and S1–S11 in plain language. Every sentence in it MUST agree with the two tables above.
@@ -249,7 +264,7 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 
 - **FR-029 (Input)**: Core play MUST work by touch, by mouse and by keyboard alone. Keyboard focus is always visible and every control has a readable name.
 - **FR-030 (Always visible)**: Site codes, link cost labels, the fiber budget, the upgrade stock, the drop meter, score and time are always visible during a run. Utilization numbers are visible when paused. No value needed to reason about a path is available by hover alone.
-- **FR-031 (Inspector)**: The pause inspector lists every link as text: its two sites, cost, capacity, utilization in each direction and state (up or cut, load state, and any pending change).
+- **FR-031 (Inspector)**: The pause inspector lists every link as text: its two sites, cost, capacity, utilization in each direction and state (up or cut, load state, and any pending change). It lists every site with its code, router ID and state. Selecting a site lists that router's table in force: every destination with its total cost and next hop (AC26).
 - **FR-032 (No green, no red; AC18, K3)**: No color in the shipped game is green or red. A color's hue is its angle on the 0–360° color wheel, computed from its red, green and blue values. **Green is any hue from 75° to 165°. Red is any hue below 25° or above 340°.** A color is judged only if it is strongly colored: its saturation (largest channel minus smallest, divided by the largest) is at least 0.25 and its largest channel is at least 0.2 of full scale. Greys, whites and near-blacks have no meaningful hue.
   - **(a) Authored colors.** Every color value written in the game's palette, styles, markup and drawing code MUST lie outside both bands. The count inside is zero.
   - **(b) Rendered frames.** Glow and blending mix authored colors on screen. A scripted census of rendered frames, in both renderers, MUST report the share of strongly colored pixels in each band as a number. A share above zero is reported as that number and listed as a known limit; it is never described as "none". A share above 1% in either band fails the check.
@@ -273,7 +288,7 @@ Numeric values marked *tunable* are play-balance constants. They are not rules (
 
 | Item | v1 |
 | --- | --- |
-| Mode | Endless, on one authored region map. The seed decides which sites appear and when, the traffic, the reward offers and the cuts. |
+| Mode | Endless, on one authored region map. The seed decides which sites appear and when, the traffic and the cuts. Reward offers are the same every time in v1. |
 | Tools | Lay link, remove link, set cost, upgrade capacity. Cost tuning is available from the start of an endless run. |
 | Events | Fiber cuts |
 | Must-have effects | The four of FR-036 |
@@ -311,7 +326,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 | 6 | One route kept | T1, sharing off | A→C: next hop B only | Tie goes to the lowest router ID. F4, S7 |
 | 7 | Split is per hop, not per path | T2, sharing on | S→T: cost 3. Shares of S→T traffic: S–A ½, A–T ½, S–B ½, B–C ¼, B–D ¼, C–T ¼, D–T ¼ | Three equal paths, but S has two next hops. A–T carries ½, not ⅓. F5 |
 | 8 | No path | T1, C–E cut | E is dark. Every packet to or from E is a "no route" drop. All other routes are unchanged. | R6, R8 |
-| 9 | Overload | One link direction, capacity 4 packets/s, queue 8, offered a steady 6 packets/s for 10 s from an empty queue | 60 offered = 40 served + 8 queued + 12 dropped | Queue grows 2/s and fills at 4 s; then 2/s drop for 6 s. R4. Exact to the packet once step-edge semantics are fixed in the tasks. |
+| 9 | Overload | One link direction, capacity 4 packets/s, queue 8, offered a steady 6 packets/s for 10 s from an empty queue | 60 offered = 40 served + 8 queued + 12 dropped | Queue grows 2/s and fills at 4 s; then 2/s drop for 6 s. R4. Exact to the packet with service before arrival in each step (FR-007). |
 | 10 | Invalid cost | Set a cost to 0 or 65536 | Rejected with a text message; routes unchanged | F2 |
 | 11 | Score | A run ends with 1,840 delivered, 212 dropped, at 6 min 05 s | Score 1,840; time 6:05 | R12 |
 | 12 | Determinism | Same seed and commands, run twice | Identical state at every step and identical score | R13 |
@@ -323,7 +338,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 - **SC-001**: All twelve cases above pass as automated tests whose expected values are taken from this file, not from the code under test.
 - **SC-002**: The routing logic agrees with an independent brute-force check on every pair of routers in every one of at least 300 seeded random networks.
 - **SC-003**: The same seed and the same commands, run twice, give an identical state at every step and an identical score, every time it is tried.
-- **SC-004**: Every v1 acceptance criterion, AC1–AC25, has a recorded result: pass, fail or not run.
+- **SC-004**: Every v1 acceptance criterion, AC1–AC26, has a recorded result: pass, fail or not run.
 - **SC-005**: A seeded run completes from start to game over at phone size (844×390) and at desktop size (1920×1080), and a video of each is saved in the repository.
 - **SC-006**: The game plays from start to game over with no network connection, served as plain files, in a clean browser profile.
 - **SC-007**: No authored color lies in the green or red band, and the rendered-frame share in each band is reported as a number (FR-032).
@@ -341,7 +356,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 | # | Decision |
 | --- | --- |
 | Q1 | In the campaign (v1.3), cost tuning unlocks after the first region. v1 has no campaign, so in endless mode it is available from the start. |
-| Q2 | v1 is endless mode on one authored map: North America, with real city codes such as DEN and CHI. The seed varies sites, traffic, rewards and cuts. Seed-generated maps and the campaign come later. |
+| Q2 | v1 is endless mode on one authored map: North America, with real city codes such as DEN and CHI. The seed varies sites, traffic, rewards and cuts. Seed-generated maps and the campaign come later. (On rewards, see the clarification of 2026-11-10 and K6.) |
 | Q3 | Until equal-cost sharing is unlocked, each router keeps one route and ties go to the lowest router ID (F4, S7). |
 | Q4 | The drop meter drains slowly while nothing is dropping, so one bad cut is survivable and sustained congestion is not. |
 | Q5 | Removing a link is allowed, returns its fiber in full, and forfeits its upgrades. |
@@ -365,6 +380,7 @@ Worked by hand on 2026-11-09 from the rule in §16.1 of RFC 2328 and copied unch
 - The game pauses when its page is hidden (FR-024).
 - A typed seed is 1 to 24 letters, digits or hyphens (FR-022), and five best scores are kept (FR-023).
 - A change made while paused is checked when it is made, against the state the earlier pending changes will produce.
+- Automated checks run in Chromium. Other browsers are not verified in v1 and are listed as a limit in the README (clarified 2026-11-10).
 
 **Dependencies**: the texts of RFC 2328 and RFC 2991 as recorded in `PROVENANCE.md`; a public-domain coastline for the region map; an openly licensed typeface shipped with the game.
 
