@@ -217,6 +217,7 @@ not prompts, and are not counted.
 | R6 | 2026-11-10T15:19Z | Independent preservation check of the spec against `StarterKit/SPEC.md` | First run: fail, three criteria had lost words in rewording. Fixed. Second run: pass, 246 pieces. |
 | R7 | 2026-11-10T15:22Z | Lab step 3: `/speckit-clarify`. Five questions asked and answered by the build agent itself, because the owner was away | Five clarifications recorded in the spec, each marked as the agent's answer. One (reward offers) departs from the wording of the owner's decision Q2 and is flagged as K6. AC26 added. |
 | R8 | 2026-11-10T15:30Z | Lab step 4: `/speckit-plan` with the lab's prompt. Tool versions read with `node --version`, `npm --version`, `docker version`, `npm view` | Plan and design files written. No research agents were used. Ten contradictions resolved in the plan (P1–P10). |
+| R9 | 2026-11-10T15:33Z | Lab step 5: `/speckit-tasks` with the lab's prompt | `tasks.md`, 69 tasks. Format and coverage checked by script: sequential IDs, story labels only in story phases, every AC named. |
 
 ## Changes of direction by the owner in the rebuild
 
