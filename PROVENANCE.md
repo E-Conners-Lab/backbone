@@ -219,6 +219,9 @@ not prompts, and are not counted.
 | R8 | 2026-11-10T15:30Z | Lab step 4: `/speckit-plan` with the lab's prompt. Tool versions read with `node --version`, `npm --version`, `docker version`, `npm view` | Plan and design files written. No research agents were used. Ten contradictions resolved in the plan (P1–P10). |
 | R9 | 2026-11-10T15:33Z | Lab step 5: `/speckit-tasks` with the lab's prompt | `tasks.md`, 69 tasks. Format and coverage checked by script: sequential IDs, story labels only in story phases, every AC named. |
 | R10 | 2026-11-10T15:39Z | Lab step 6: `/speckit-analyze`, two passes, with fixes to the spec, plan and tasks between them | Pass 1: 15 findings (1 critical, 2 high). Pass 2: none critical or high; full coverage by ID. Report in `docs/verification/analysis.md`. |
+| R11 | 2026-11-10T15:57Z | Lab step 7 begins: `/speckit-implement` with the lab's prompt. Skill `secure-build-standard` loaded. `npm install` of exact versions; `npm audit`; `npx playwright install chromium` | 45 packages, 0 vulnerabilities. |
+| R12 | 2026-11-10T15:57Z | Natural Earth data for the map, tag v5.1.2, fetched by `tools/build-map.mjs` from raw.githubusercontent.com: populated places 1:10m (SHA-256 `fd3fa867a320cbd5c5b6bb5bc550afeec2939fb2cef688e508007282a55ac42f`), land 1:50m (`e874b27a51d146452be360cafb3cc50c86001074a67d534113e6534682f9826b`), lakes 1:50m (`d350b75978b26fe839b797c2c529b2fb8f47fb3983c03f4964e36d5df9378a52`) | `region-na.json` (18 sites, coordinates from the data) and `coast-na.json` (39 land rings, 24 lake rings, 21 KB). The land and lake hashes equal the ones recorded for the hand-built v1. |
+| R13 | 2026-11-10T15:57Z | Phase 2 checkpoint: `npm test` | 84 of 84 pass. Tests were written before the code. Ten mutation checks all caught. Details in `docs/verification/results.md`. |
 
 ## Changes of direction by the owner in the rebuild
 

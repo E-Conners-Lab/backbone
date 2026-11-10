@@ -40,6 +40,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T15:30Z | Lab step 4 done: `/speckit-plan` wrote the plan, research notes, data model, three contracts and the quickstart |
 | 2026-11-10T15:33Z | Lab step 5 done: `/speckit-tasks` wrote 69 tasks |
 | 2026-11-10T15:39Z | Lab step 6 done: `/speckit-analyze` run twice, with the fixes between |
+| 2026-11-10T15:57Z | Lab step 7 under way. Phase 2 checkpoint: the simulation is proven with no graphics, 84 unit tests pass |
 
 ## Steps and results
 
@@ -99,6 +100,10 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 54 | Lab step 5, `/speckit-tasks`, with the lab's prompt | Done. `specs/001-backbone-first-playable/tasks.md`: 69 tasks in nine phases. Setup (6), the simulation with no graphics (21, tests written first), five story phases (27), the four effects (4), packaging and evidence (11). Tests are required tasks, not optional ones. A script confirmed the numbering, the format, a path in every task and that every acceptance criterion AC1–AC26 is named by a task. |
 | 55 | Lab step 6, `/speckit-analyze`, first pass | 15 findings: 1 critical (the color rule let a share of green or red above zero stand as a known limit without going to the owner), 2 high (the text review left out the README; the no-WebGL check was scheduled before the WebGL renderer existed), 6 medium, 5 low, 1 open decision (K6). Listed in `docs/verification/analysis.md`. |
 | 56 | Fix the findings in the spec, plan and tasks, then rerun the analysis | Done. Second pass: every requirement (40), success criterion (13), acceptance criterion (26), rule (14) and principle (7) is named by a task; 70 tasks; no critical or high finding left. The owner did not review the fixes; each is listed in the analysis file. |
+| 57 | Lab step 7, `/speckit-implement`, Phase 1: pinned build tools installed, `npm audit` | Done. 45 packages, 0 vulnerabilities (SEC-26, SEC-27). Chromium for Playwright downloaded. |
+| 58 | Phase 2, routing: fixtures typed from the spec, failing tests, then `spf.ts` and `forwarding.ts` | 15 then 25 tests pass. Mutation check: with the equal-cost branch disabled 5 tests fail, as they should. |
+| 59 | Phase 2, the run: `linkq.ts`, content data and loader, map data from Natural Earth, `world.ts`, `replay.ts`, `bot.ts` | 84 unit tests pass. Nine deliberate mutations of the rules were each caught. Tuning needed no change: median scripted run 6:53 on eight seeds. Recorded in `docs/verification/results.md`. |
+| 60 | Hand trace of one packet from the region file (C6 evidence) | Done: `docs/verification/hand-trace.md`. The engine agrees with every number, including the 28 steps the packet takes. |
 
 ## Gotchas
 
@@ -123,6 +128,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | The constitution command says to write only the constitution file, while the owner's rules say to log every step | The command guards against starting feature work early | This log and the runbook were updated; `PROVENANCE.md` was left alone and flagged as K5 |
 | First visible showcase run crashed after the owner pressed Enter | The agent told the owner to click in the window first; the click reached a game control, the game left the welcome screen, and the recorder waited for a button that was gone | A click shield covers the page while it waits; a missing button is no longer fatal. Checked by an automated click on Start. |
 | Rewriting acceptance criteria into Spec Kit's Given/When/Then form quietly dropped words from three of them | The form invites rephrasing | A script compares each criterion's words with the input; the three were restored to the input's wording |
+| The case 9 test failed although the spec's numbers were right | An extra assertion of the agent's own said the queue first reaches 8 at exactly 4 s; it first touches 8 at 3.7 s | The assertion was corrected to what the spec says. No expected value from the spec was changed. |
+| Two expected values in the routing fixture were not from the spec | The agent typed two routes for case 8 and one next hop for case 5 that the spec does not state | Removed. Case 8 compares "all other routes unchanged" with the uncut topology instead. |
 
 ## Questions and answers
 
