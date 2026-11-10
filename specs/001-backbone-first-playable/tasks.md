@@ -32,7 +32,7 @@ description: "Task list for Backbone, first playable version (v1)"
 - [X] T001 Create `package.json` with exact versions and no runtime dependency (FR-039): typescript 7.0.2, vite 8.3.7, vitest 5.1.0, @playwright/test 1.65.0, @fontsource/ibm-plex-sans 5.3.0, @fontsource/ibm-plex-mono 5.3.0, @types/node 26.6.6; scripts `dev`, `build`, `test`, `test:e2e` (builds first), `verify:dist`, `record`. Run `npm install` to write `package-lock.json`, then `npm audit`, and record both results (SEC-26, SEC-27).
 - [X] T002 [P] Create `tsconfig.json`: strict, ES2022, bundler module resolution, JSON modules, unchecked index access reported.
 - [X] T003 [P] Create `vite.config.ts`: base `./`, output `dist/`, and the Vitest settings (Node environment, `tests/unit/**/*.test.ts`).
-- [X] T004 [P] Create `playwright.config.ts`: Chromium, project `desktop` (1920×1080, mouse) and project `phone` (844×390, touch), a plain static server for `dist/` on port 8765, video off by default. Run `npx playwright install chromium` once.
+- [X] T004 [P] Create `playwright.config.ts`: Chromium, project `desktop` (1920×1080, mouse) and project `phone` (844×390, touch), a plain static server for `dist/` on port 8791, video off by default. Run `npx playwright install chromium` once.
 - [X] T005 [P] Update `.gitignore` (dependencies, test output, the map-source cache) and create the folders `src/sim`, `src/content`, `src/render`, `src/ui`, `tests/unit`, `tests/e2e`, `tests/fixtures`, `docs/verification`.
 - [X] T006 Create `index.html` (page shell, no color literal, no inline script) and a stub `src/main.ts`, and confirm `npm run build` and `npm test` both run.
 
@@ -98,18 +98,18 @@ description: "Task list for Backbone, first playable version (v1)"
 
 ### Implementation for User Story 1
 
-- [ ] T029 [P] [US1] Write `src/render/camera.ts` (tilt, zoom, pan, map ↔ screen, hit-testing with targets of at least 44 CSS pixels) and `tests/unit/camera.test.ts` (round trip; hit radius) (FR-029).
-- [ ] T030 [US1] Write `src/render/viewmodel.ts`: turn the world, the pending copy and the interpolation fraction into a screen-space scene. One pulse per simulated packet, on the link where the packet is (FR-005, S8). Add `tests/unit/viewmodel.test.ts`: the number of pulses equals the packets on wires and each lies on its link's segment.
-- [ ] T031 [US1] Write `src/render/overlay.ts` (site codes, cost labels, icons; FR-030) and `src/render/canvas2d.ts` (grid, coastline, links, pulses, sites) drawing the shared scene.
-- [ ] T032 [P] [US1] Write `src/ui/styles.css` (no color literal; CSS variables set from `palette.json`; IBM Plex from the pinned @fontsource packages, with the licence text copied to `public/licenses/`), `src/ui/hud.ts` (fiber budget, upgrade stock, drop meter with its number, score, time, seed, pause button; FR-030, FR-022) and `src/ui/messages.ts` (text messages from `text.json`, announced politely; `textContent` only; FR-040, SEC-14).
-- [ ] T033 [US1] Write `src/ui/input.ts`: drag from one site to another lays a link; click or tap a link opens its options; wheel zooms; drag on empty map pans (FR-029, AC2, AC16).
-- [ ] T034 [US1] Write `src/ui/linkpanel.ts`: − and + and a typed cost ("whole number from 1 to 65535"), Upgrade, Remove; every refusal shown as text (AC5, AC24, AC25, FR-004, FR-012, FR-013, FR-014, FR-040).
-- [ ] T035 [P] [US1] Write `src/ui/reward.ts`: the reward choice (fiber or one upgrade), with no time limit (FR-016, R10).
-- [ ] T036 [US1] Write `src/ui/screens.ts` with a first welcome card (the briefing and Start; FR-027) and `src/main.ts`: load and validate content, the fixed-step loop with interpolation, the command queue, the URL switches `seed`, `autostart`, `speed`, `bot`, `hud`, `test` checked against fixed patterns (SEC-11, SEC-12), and the test hook of `contracts/ui.md`.
+- [X] T029 [P] [US1] Write `src/render/camera.ts` (tilt, zoom, pan, map ↔ screen, hit-testing with targets of at least 44 CSS pixels) and `tests/unit/camera.test.ts` (round trip; hit radius) (FR-029).
+- [X] T030 [US1] Write `src/render/viewmodel.ts`: turn the world, the pending copy and the interpolation fraction into a screen-space scene. One pulse per simulated packet, on the link where the packet is (FR-005, S8). Add `tests/unit/viewmodel.test.ts`: the number of pulses equals the packets on wires and each lies on its link's segment.
+- [X] T031 [US1] Write `src/render/overlay.ts` (site codes, cost labels, icons; FR-030) and `src/render/canvas2d.ts` (grid, coastline, links, pulses, sites) drawing the shared scene.
+- [X] T032 [P] [US1] Write `src/ui/styles.css` (no color literal; CSS variables set from `palette.json`; IBM Plex from the pinned @fontsource packages, with the licence text copied to `public/licenses/`), `src/ui/hud.ts` (fiber budget, upgrade stock, drop meter with its number, score, time, seed, pause button; FR-030, FR-022) and `src/ui/messages.ts` (text messages from `text.json`, announced politely; `textContent` only; FR-040, SEC-14).
+- [X] T033 [US1] Write `src/ui/input.ts`: drag from one site to another lays a link; click or tap a link opens its options; wheel zooms; drag on empty map pans (FR-029, AC2, AC16).
+- [X] T034 [US1] Write `src/ui/linkpanel.ts`: − and + and a typed cost ("whole number from 1 to 65535"), Upgrade, Remove; every refusal shown as text (AC5, AC24, AC25, FR-004, FR-012, FR-013, FR-014, FR-040).
+- [X] T035 [P] [US1] Write `src/ui/reward.ts`: the reward choice (fiber or one upgrade), with no time limit (FR-016, R10).
+- [X] T036 [US1] Write `src/ui/screens.ts` with a first welcome card (the briefing and Start; FR-027) and `src/main.ts`: load and validate content, the fixed-step loop with interpolation, the command queue, the URL switches `seed`, `autostart`, `speed`, `bot`, `hud`, `test` checked against fixed patterns (SEC-11, SEC-12), and the test hook of `contracts/ui.md`.
 
 ### Checks for User Story 1
 
-- [ ] T037 [US1] Write `tests/e2e/us1-shape.spec.ts`: AC1 (briefing, then the map with the first sites), AC2 (drag lays a link, fiber is spent, traffic flows), AC4 through the UI (after a cost change pulses use the new lowest-cost path), AC5 (three refusals, nothing spent, a message each), AC24 and AC25. AC3 is checked on topology T1 in T021.
+- [X] T037 [US1] Write `tests/e2e/us1-shape.spec.ts`: AC1 (briefing, then the map with the first sites), AC2 (drag lays a link, fiber is spent, traffic flows), AC4 through the UI (after a cost change pulses use the new lowest-cost path), AC5 (three refusals, nothing spent, a message each), AC24 and AC25. AC3 is checked on topology T1 in T021.
 
 **Checkpoint**: User Story 1 is playable and checked on its own.
 

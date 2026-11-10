@@ -68,7 +68,7 @@ The lab asks for contradictions to be resolved explicitly. Each row names the tw
 | P4 | The input plan lists the default link cost under tuning constants. The spec states "New links get cost 10" as part of the model shown to the player (S6, FR-015). | Cost 10 is a rule. It is a named constant in the simulation, not in `tuning.json`, and a test asserts it. |
 | P5 | The input spec says the seed decides the reward offers. The input plan's tuning gives one offer. | Follows the spec's clarification: every v1 offer is the same two choices. Flagged for the owner as K6. |
 | P6 | Input decision D5 chose "custom" spec files. The owner later chose Spec Kit (`docs/PID.md` amendment 1.3). | Spec Kit. `tasks.md` lives in this feature directory, not at the repository root. |
-| P7 | The lab guide and the input plan serve the game on port 8000. On this machine port 8000 belongs to another service. | Commands in the README and `quickstart.md` use port 8765 and say any free port works. |
+| P7 | The lab guide and the input plan serve the game on port 8000. On this machine port 8000 belongs to another service, and port 8765 still serves the hand-built v1 from the main checkout. | Commands in the README and `quickstart.md` use port 8791 and say any free port works. The end-to-end tests start their own server and refuse to reuse one that is already running. |
 | P8 | Spec Kit's tasks template groups work by user story, and story 1 includes the pulses. C7 puts routing correctness and the core loop before any visual effect. | The simulation, with all twelve cases passing and no graphics, is the Foundational phase that blocks every story. The four effects are the last story-level work. |
 | P9 | The input plan's frame-time check is done on the owner's phone. The agent cannot do it. | Recorded as not run (SC-012). The agent records a desktop frame-time figure separately and does not call it the phone result. |
 | P10 | The input plan keeps the scripted player in `src/sim/`. It is not simulation logic. | `src/sim/bot.ts` stays there because it is pure, is covered by the purity test, and the simulation never imports it. |
@@ -157,7 +157,7 @@ The stack is the one the owner approved in `StarterKit/PLAN.md`, re-checked agai
 ```sh
 npm ci            # developers only
 npm run build     # type-check, then Vite build → dist/
-python3 -m http.server 8765 --bind 127.0.0.1 --directory dist
+python3 -m http.server 8791 --bind 127.0.0.1 --directory dist
 ```
 
 `dist/` is the build output and the Arcade `static_root`. It holds `index.html`, hashed JS and CSS, fonts and the card image, all with relative URLs. `dist/` is committed (decision D1), so a player or the Arcade host needs no install. `npm run verify:dist` rebuilds into a temporary folder and fails if it differs from the committed `dist/`.

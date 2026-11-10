@@ -222,6 +222,7 @@ not prompts, and are not counted.
 | R11 | 2026-11-10T15:57Z | Lab step 7 begins: `/speckit-implement` with the lab's prompt. Skill `secure-build-standard` loaded. `npm install` of exact versions; `npm audit`; `npx playwright install chromium` | 45 packages, 0 vulnerabilities. |
 | R12 | 2026-11-10T15:57Z | Natural Earth data for the map, tag v5.1.2, fetched by `tools/build-map.mjs` from raw.githubusercontent.com: populated places 1:10m (SHA-256 `fd3fa867a320cbd5c5b6bb5bc550afeec2939fb2cef688e508007282a55ac42f`), land 1:50m (`e874b27a51d146452be360cafb3cc50c86001074a67d534113e6534682f9826b`), lakes 1:50m (`d350b75978b26fe839b797c2c529b2fb8f47fb3983c03f4964e36d5df9378a52`) | `region-na.json` (18 sites, coordinates from the data) and `coast-na.json` (39 land rings, 24 lake rings, 21 KB). The land and lake hashes equal the ones recorded for the hand-built v1. |
 | R13 | 2026-11-10T15:57Z | Phase 2 checkpoint: `npm test` | 84 of 84 pass. Tests were written before the code. Ten mutation checks all caught. Details in `docs/verification/results.md`. |
+| R14 | 2026-11-10T16:17Z | Phase 3: User Story 1 built; `npm test` and `npx playwright test tests/e2e/us1-shape.spec.ts` | Unit 104 of 104 (**corrected**: first written as 109, a miscount). End-to-end 12 of 12 (desktop and phone). First run: 12 failed because the tests reused a server on port 8765 that serves the hand-built v1; fixed by using port 8791 and never reusing. Second run found a touch ghost-click bug; fixed. |
 
 ## Changes of direction by the owner in the rebuild
 

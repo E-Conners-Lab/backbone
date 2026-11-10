@@ -5,10 +5,10 @@ How to play the build and how to check it. Commands are run from the repository 
 ## Play (no install)
 
 ```sh
-python3 -m http.server 8765 --bind 127.0.0.1 --directory dist
+python3 -m http.server 8791 --bind 127.0.0.1 --directory dist
 ```
 
-Open <http://127.0.0.1:8765>. Any free port works. The game needs no network once loaded.
+Open <http://127.0.0.1:8791>. Any free port works. The game needs no network once loaded.
 
 ## Develop and check
 

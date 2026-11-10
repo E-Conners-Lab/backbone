@@ -345,6 +345,13 @@ function apply(world: World, command: Command): void {
   }
 }
 
+/** Applies a command if the rules accept it, and says why when they do not. Does not advance time. */
+export function applyCommand(world: World, command: Command): Reason | null {
+  const reason = validate(world, command);
+  if (!reason) apply(world, command);
+  return reason;
+}
+
 // --- the step ---------------------------------------------------------------------------
 
 function pickDestination(world: World, from: Site, active: Site[]): SiteId {
@@ -389,9 +396,8 @@ export function step(world: World, commands: Command[]): StepEvents {
 
   // 1–2. Commands, in the order given.
   for (const command of commands) {
-    const reason = validate(world, command);
+    const reason = applyCommand(world, command);
     if (reason) events.rejected.push({ command, reason });
-    else apply(world, command);
   }
   // 1, 3. Time stands still once the run is over and while a reward is pending.
   if (world.over || world.rewardPending) return finish();

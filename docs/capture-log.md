@@ -41,6 +41,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 2026-11-10T15:33Z | Lab step 5 done: `/speckit-tasks` wrote 69 tasks |
 | 2026-11-10T15:39Z | Lab step 6 done: `/speckit-analyze` run twice, with the fixes between |
 | 2026-11-10T15:57Z | Lab step 7 under way. Phase 2 checkpoint: the simulation is proven with no graphics, 84 unit tests pass |
+| 2026-11-10T16:17Z | User Story 1 playable in a browser and checked at phone and desktop sizes |
 
 ## Steps and results
 
@@ -104,6 +105,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | 58 | Phase 2, routing: fixtures typed from the spec, failing tests, then `spf.ts` and `forwarding.ts` | 15 then 25 tests pass. Mutation check: with the equal-cost branch disabled 5 tests fail, as they should. |
 | 59 | Phase 2, the run: `linkq.ts`, content data and loader, map data from Natural Earth, `world.ts`, `replay.ts`, `bot.ts` | 84 unit tests pass. Nine deliberate mutations of the rules were each caught. Tuning needed no change: median scripted run 6:53 on eight seeds. Recorded in `docs/verification/results.md`. |
 | 60 | Hand trace of one packet from the region file (C6 evidence) | Done: `docs/verification/hand-trace.md`. The engine agrees with every number, including the 28 steps the packet takes. |
+| 61 | Phase 3, User Story 1: camera, shared view model, fallback renderer, label layer, HUD, input, link options, reward choice, screens, wiring | Done. 104 unit tests pass (**corrected**: this row first said 109, a miscount by the agent). End-to-end: 12 of 12 pass (AC1, AC2, AC4, AC5, AC24, AC25 at 1920×1080 by mouse and at 844×390 by touch). Two real problems were found on the way; see gotchas. |
 
 ## Gotchas
 
@@ -130,6 +132,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 | Rewriting acceptance criteria into Spec Kit's Given/When/Then form quietly dropped words from three of them | The form invites rephrasing | A script compares each criterion's words with the input; the three were restored to the input's wording |
 | The case 9 test failed although the spec's numbers were right | An extra assertion of the agent's own said the queue first reaches 8 at exactly 4 s; it first touches 8 at 3.7 s | The assertion was corrected to what the spec says. No expected value from the spec was changed. |
 | Two expected values in the routing fixture were not from the spec | The agent typed two routes for case 8 and one next hop for case 5 that the spec does not state | Removed. Case 8 compares "all other routes unchanged" with the uncut topology instead. |
+| The first end-to-end run failed all 12 tests: the page had no test hook | Port 8765 was already serving the hand-built v1 from the main checkout (a server left running since Mon Nov 9, 7:51 PM), and Playwright was set to reuse a running server. The tests were running against the wrong game. | The tests now start their own server on port 8791 and refuse to reuse one. The old server was left alone: it is the owner's. |
+| On a phone, tapping a link also pressed a button in the options panel that opened under the finger (an unwanted upgrade) | After a touch the browser sends a click at the same spot; the panel had opened by then, so the click landed on it | The panel now opens on that click, not before it. Found by the phone end-to-end test for AC24. |
 
 ## Questions and answers
 
@@ -161,6 +165,7 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 
 ## Open items
 
+- Port 8765 on this machine still serves the hand-built v1 from the main checkout (process started Mon Nov 9, 7:51 PM EST). The agent did not stop it. The owner can stop it when it is no longer wanted.
 - **K6, owner decides.** The approved input spec says the seed decides the reward offers (R10, Q2, the Mode row). The approved plan's tuning table gives one offer, "+3,000 km of fiber or +1 upgrade", and v1 has only two rewards. The agent's clarification follows the plan: every v1 offer holds the same two choices. If the owner wants offers that differ by seed in v1, the spec and tasks need a rule for what varies.
 - A full showcase run of the hand-built v1 was recorded to game over (seed `2328`, 8:56, 15,134 delivered, 197 inputs, none missed). The owner chose to keep the video private, so it is not in this repository. An earlier entry saying no finished video exists is **corrected** by this one.
 - Branch `showcase-video` on the remote held that video. The agent's attempt to delete the remote branch was blocked by its permission settings. **Resolved:** the owner deleted the remote branch on 2026-11-09.

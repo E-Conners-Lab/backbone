@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const PORT = 8765;
+// Not 8000 or 8765: on the owner's machine both belong to other local servers.
+const PORT = 8791;
 
 // End-to-end tests run against the committed build output, served as plain files.
 export default defineConfig({
@@ -13,7 +14,10 @@ export default defineConfig({
   webServer: {
     command: `python3 -m http.server ${PORT} --bind 127.0.0.1 --directory dist`,
     url: `http://127.0.0.1:${PORT}/`,
-    reuseExistingServer: true,
+    // Never reuse a server that is already there: it may be serving a different build.
+    reuseExistingServer: false,
+    stdout: "ignore",
+    stderr: "ignore",
   },
   projects: [
     { name: "desktop", use: { viewport: { width: 1920, height: 1080 } } },
