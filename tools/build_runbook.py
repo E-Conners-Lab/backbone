@@ -35,26 +35,39 @@ ul.check li span{display:block;color:var(--muted);font-size:.92rem}
 """
 
 
+STAMP = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?Z")
+
+
+def local_time(found: re.Match[str]) -> str:
+    """One UTC timestamp as US Eastern with the weekday, e.g. "Tue Nov 10, 6:05 PM EST"."""
+    day, hh, mm, ss = found.groups()
+    moment = (
+        datetime.fromisoformat(f"{day}T{hh}:{mm}:{ss or '00'}")
+        .replace(tzinfo=UTC)
+        .astimezone(EASTERN)
+    )
+    return f"{moment.strftime('%a %b')} {moment.day}, {moment.strftime('%I:%M %p %Z').lstrip('0')}"
+
+
 def inline(text: str) -> str:
     out = html.escape(text.strip())
+    # The log keeps UTC. The book is read by the owner, so a full timestamp in running
+    # text is shown in US Eastern. Anything in code formatting stays as written, because
+    # it quotes a file or a command.
+    parts = re.split(r"(`[^`]+`)", out)
+    out = "".join(
+        part if part.startswith("`") else STAMP.sub(local_time, part) for part in parts
+    )
     out = re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
     return re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
 
 
 def eastern(cell: str) -> str:
     """Rewrites a leading UTC timestamp as US Eastern with the weekday; leaves other text alone."""
-    found = re.match(
-        r"(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?Z(.*)", cell.strip()
-    )
+    found = STAMP.match(cell.strip())
     if not found:
         return eastern_approx(cell)
-    day, hh, mm, ss, rest = found.groups()
-    moment = (
-        datetime.fromisoformat(f"{day}T{hh}:{mm}:{ss or '00'}")
-        .replace(tzinfo=UTC)
-        .astimezone(EASTERN)
-    )
-    return f"{moment.strftime('%a %b')} {moment.day}, {moment.strftime('%I:%M %p %Z').lstrip('0')}{rest}"
+    return local_time(found) + cell.strip()[found.end() :]
 
 
 def eastern_approx(cell: str) -> str:

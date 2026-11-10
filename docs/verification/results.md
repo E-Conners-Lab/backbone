@@ -230,11 +230,11 @@ Each row names the automated check that produced the result. "Pass" means the ch
 | SC-008 keyboard alone, touch at phone size, reduced motion, fallback renderer | Pass | `us4-access`, `renderers` |
 | SC-009 card image 16:9 and under 1 MB | Pass | 1600×900, 76,758 bytes (the card made again on 2026-11-10; see "Card image" at the end) |
 | SC-010 README another engineer can follow from a fresh copy | Pass for the README's commands, run by the build agent. Not followed by another engineer. | "Fresh copy" below |
-| SC-011 a tester explains a bad cost change from the screen alone | **Not run** | Needs a person |
-| SC-012 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone |
-| SC-013 a person's run lasts 5 to 10 minutes | **Not run** | Needs a person. The scripted player's runs last 6:15 to 7:14. |
+| SC-011 a tester explains a bad cost change from the screen alone | **Not run** | Needs a person and a record of what they said. The owner says he has played the game (2026-11-10); no explanation of a bad cost change was recorded. |
+| SC-012 60 frames a second on a mid-range phone | **Not run** | Needs a measured frame rate on a mid-range phone. The owner says the game "feels smooth" on an iPhone 17 Pro (2026-11-10): a high-end phone and an impression, with no frame rate measured. |
+| SC-013 a person's run lasts 5 to 10 minutes | **Owner's report, not timed** | The owner says he played for "about 6 or 7 minutes" in a web browser (2026-11-10), inside the range. It is his estimate; whether it was one run from Start to game over was not said, and the build timed nothing. The scripted player's runs last 6:15 to 7:14. |
 
-Not covered by any check: browsers other than Chromium, screen readers, a real phone, and a person playing at all.
+Not covered by any check: browsers other than Chromium, screen readers, a real phone, and a person playing at all (**changed** 2026-11-10: the owner reports that he played it, in a web browser and on an iPhone 17 Pro; see "After the merge" at the end of this file).
 
 ## Code review (T068, 2026-11-10T17:25Z)
 
@@ -358,7 +358,7 @@ The four skipped end-to-end tests are each run at the other screen size: touch g
 
 **Failed:** nothing in the final run.
 
-**Not verified** (needs a person or equipment the build did not have): SC-011, SC-012 and SC-013; a person playing the rebuilt game at all; browsers other than Chromium; screen readers; a real phone; frame rate on real graphics hardware; the README followed by another engineer. The third review round's fixes were tested but not reviewed again.
+**Not verified** (needs a person or equipment the build did not have): SC-011, SC-012 and SC-013; a person playing the rebuilt game at all (**changed** 2026-11-10: the owner says he played and tested it; see "After the merge" at the end of this file); browsers other than Chromium; screen readers; a real phone; frame rate on real graphics hardware; the README followed by another engineer. The third review round's fixes were tested but not reviewed again.
 
 ## Ready for the Arcade: what the workshop repo asks, and where this stands
 
@@ -377,7 +377,7 @@ Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` 
 
 | Item | State | Evidence |
 | --- | --- | --- |
-| The player can complete the scoped game from a fresh start | By automation, yes; by a person, not yet | End-to-end runs from a fresh load to game over at both sizes; the runtime check plays a run from the plain URL |
+| The player can complete the scoped game from a fresh start | By automation, yes. By a person: the owner says he played and tested it (2026-11-10); the build did not observe it | End-to-end runs from a fresh load to game over at both sizes; the runtime check plays a run from the plain URL |
 | Correct, incorrect, and edge cases match independently checked expectations | Yes | The twelve hand-worked cases, a brute-force oracle on 320 graphs, and FRR |
 | Every wrong choice explains a specific misconception | In this game's terms | The item is written for question-and-answer games. Here every refused action says why in words (AC5, AC25, FR-040), and "About the model" says what is simplified. There is no wrong-answer screen. |
 | Core interactions work with the keyboard and visible focus | Yes | AC17 |
@@ -407,3 +407,29 @@ Not run again after this change: the full end-to-end suite, the fresh-copy check
 
 The tool gained two optional arguments for this, a settle time and where the scanning sweep stands, and now waits for the typefaces before the picture.
 
+## After the merge (2026-11-10)
+
+**Pull request #3** (the clean-up) was merged at 2026-11-10T23:00:54Z on the owner's word ("yes, merge it"): merge commit `6a82d27`. `main` then held 158 tracked files. On the public `main`, read with no login: `tools/shot.mjs` and `docs/spec-map.png` answer 404; `dist/index.html`, `public/hero.webp` and `docs/spec-map.html` answer 200; `ARCADE.md` equals the local file.
+
+**Fresh copy from GitHub's `main`, with no login (2026-11-10T23:08Z).** The owner asked whether John could pull the game. The repository is public (GitHub's API says so with and without a login). `main` was cloned from `https://github.com/E-Conners-Lab/backbone.git` into an empty folder with git's credential helper switched off, and the README was followed there.
+
+| Step | Result |
+| --- | --- |
+| Clone of `main` | `6a82d27`, clean, no `node_modules` |
+| `python3 -m http.server 8791 --bind 127.0.0.1 --directory dist`, nothing installed | `index.html`, the 2 files it names and `hero.webp` answer 200 |
+| `npm ci` | 45 packages |
+| `npm test` | 124 of 124 |
+| `npm run build`, `npm run verify:dist` | Built; `dist/` matches, 13 files |
+| `npm run test:e2e` | 74 pass, 4 skipped by design |
+| `node tools/confirm-runtime.mjs` | 8 of 8 claims of `ARCADE.md`'s Runtime section hold |
+| Tracked files after the checks | Unchanged |
+
+Run by the build agent on the build machine, so the tools were the ones already installed here (Node v26.3.1, Playwright's Chromium). It is not another engineer's machine.
+
+**The owner's play.** On 2026-11-10T23:05Z the owner said: "we can also change the repo because I did play it and test it". The records had said that no person had played the rebuilt game; they now give his report. Asked on what device and browser he played, for how long, and whether anything went wrong, he said at 2026-11-10T23:12Z: "I basically tried it from the web browser. I haven't tried it from my phone yet. What would I need to do to actually try it from my phone? Then I played for about 6 or 7 minutes." At 2026-11-10T23:16Z he added: "I'm playing it on my iPhone Pro now and it feels smooth." and "Sorry, 17 Pro." The build did not observe, time or measure any of it. He did not name a browser, say how he opened the game on the phone, or say what he checked.
+
+| Criterion | State after his report |
+| --- | --- |
+| SC-011 a tester explains a bad cost change from the screen alone | Not run. No explanation was recorded. |
+| SC-012 60 frames a second on a mid-range phone | Not run. "It feels smooth" on an iPhone 17 Pro is an impression on a high-end phone; no frame rate was measured. |
+| SC-013 a person's run lasts 5 to 10 minutes | Owner's report, not timed: about 6 or 7 minutes, inside the range. Whether that was one run from Start to game over was not said. |

@@ -5,7 +5,8 @@
 # above was given after the owner played the hand-built v1 (tag v1-handbuilt). He had said he would confirm it
 # again for the rebuilt game. On 2026-11-10 he asked for the rebuilt game to be made ready to send to the
 # Arcade, and then confirmed in the build session: "go ahead and push, and I consent". Whether he had played
-# the rebuilt game by then is not recorded. The value was already true; the build agent did not touch the
+# the rebuilt game by then is not recorded; later that day he said in the session: "I did play it and test it".
+# The value was already true; the build agent did not touch the
 # creator block.
 # Checked against the Arcade's own template (automateyournetwork.com/arcade/ARCADE.md, the same file as
 # WORKSHOP/LAB/StarterKit/ARCADE.md at NAF_AC6 commit b77da71) and the Per-Hop Works example.
@@ -19,7 +20,7 @@ game:
   topics: [OSPF, "Shortest path first", "Link cost", Reconvergence, "Capacity planning", "RFC 2328"]
   category: routing
   skill_level: intermediate
-  play_minutes: 7            # the scripted player lasts 6:15 to 7:14 on eight seeds; a person's run length was not measured
+  play_minutes: 7            # the scripted player lasts 6:15 to 7:14 on eight seeds; the owner reports about 6 or 7 minutes of play, not timed
   levels: 1                  # one region, endless mode
   card_image: public/hero.webp
   card_image_alt: "A dark map of North America with glowing fiber links between twelve cities from San Francisco to Washington, several links amber with congestion, and one cut link in magenta inside the ripple of the cut."
@@ -55,7 +56,7 @@ build:
   rag_and_sources: ["The owner's three approved input files in StarterKit/ (constitution, spec, plan)", "RFC 2328 (OSPF Version 2) text from rfc-editor.org, sections 16.1, 16.1.1, 16.8, 13.2, 9.2, A.4.2, C.3", "RFC 2991, searched for its statements on reordering and hashing", "NAF_AC6 workshop repo at commit b77da71: lab guide, StarterKit README, ARCADE.md template and the Per-Hop Works example", "The Arcade page at automateyournetwork.com/arcade and its ARCADE.md template", "Natural Earth v5.1.2: populated places 1:10m, land and lakes 1:50m (map data)", "FRR 10.7.1 as a reference OSPF implementation", "The approved visual mock in mock/"]
   skills_and_plugins: ["GitHub Spec Kit commands as Claude Code skills: speckit-constitution, speckit-specify, speckit-clarify, speckit-plan, speckit-tasks, speckit-analyze, speckit-implement", "secure-build-standard (owner's skill)", "code-review (Claude Code skill)", "Owner's Claude Code hooks: ruff on Python edits (seen to run), disk warning, code-review gate"]
   other_tools: ["TypeScript 7.0.2", "Vite 8.3.7", "Vitest 5.1.0", "Playwright 1.65.0 with Chromium headless shell 158.0.8127.18", "Node v26.3.1", "Python 3.15.0", "Docker 29.9.1", "ffmpeg 8.0.1", "cwebp 1.6.0", "ruff", "gitleaks 8.30.1", "curl", "git"]
-  human_prompts: 11          # in the rebuild session, counted to 2026-11-10T22:52Z; the three input files came from an earlier session with 6 prompts
+  human_prompts: 19          # in the rebuild session, counted to 2026-11-10T23:16Z; the three input files came from an earlier session with 6 prompts
   usage:
     input_tokens: unknown
     output_tokens: unknown
@@ -74,14 +75,14 @@ runtime:
   requires_api_key: false
   uses_ai_at_runtime: false
   browsers: ["Chromium headless shell 158 (Playwright)"]
-  accessibility: "Tested by automation in Chromium only: keyboard-only play with visible focus at desktop size; touch at phone size; reduced motion; play without WebGL in the Canvas 2D fallback; no green or red in authored colors, and zero pixels in either band in screenshots of both renderers; text contrast at least 4.5 to 1; every control named. Not tested: a person playing, screen readers, a real phone, Safari, Firefox."
+  accessibility: "Tested by automation in Chromium only: keyboard-only play with visible focus at desktop size; touch at phone size; reduced motion; play without WebGL in the Canvas 2D fallback; no green or red in authored colors, and zero pixels in either band in screenshots of both renderers; text contrast at least 4.5 to 1; every control named. Not tested by the build: a person playing, screen readers, a real phone, Safari, Firefox. The owner reports playing in a web browser for about 6 or 7 minutes and on an iPhone 17 Pro, where he says it feels smooth; the browsers were not named and nothing was measured."
   save_state: "browser localStorage (five best scores and the reduced-motion setting)"
 
 verification:
   tests: "npm test && npm run build && npm run verify:dist && npm run test:e2e"
   tests_passing: 198          # 124 unit (Vitest) + 74 end-to-end (Playwright); 4 end-to-end tests are skipped by design, each being checked at the other screen size
   facts_sourced_from: ["RFC 2328", "RFC 2991"]
-  known_limits: ["Single area, point-to-point links, one router per site", "Convergence is instant: no hello or dead timers, flooding delay or micro-loops", "One cost per link for both directions", "Each router keeps one equal-cost route in v1; ties go to the lowest router ID", "Fixed-size packets, fixed-rate queue with tail drop, no TCP or QoS", "Capacity upgrades do not change cost", "Only links fail", "Not yet played by a person; run length for people and frame rate on a real phone were not measured", "Verified in Chromium only"]
+  known_limits: ["Single area, point-to-point links, one router per site", "Convergence is instant: no hello or dead timers, flooding delay or micro-loops", "One cost per link for both directions", "Each router keeps one equal-cost route in v1; ties go to the lowest router ID", "Fixed-size packets, fixed-rate queue with tail drop, no TCP or QoS", "Capacity upgrades do not change cost", "Only links fail", "Play by a person rests on the owner's own report (a web browser for about 6 or 7 minutes; an iPhone 17 Pro), which the build did not observe, time or measure; frame rate on a mid-range phone was not measured", "Verified in Chromium only"]
 ---
 
 ## In one paragraph
