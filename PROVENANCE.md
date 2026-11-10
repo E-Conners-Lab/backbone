@@ -194,6 +194,9 @@ not prompts, and are not counted.
 | 2 | 2026-11-10, about 04:15Z | Asked whether the project could be finished unattended overnight |
 | 3 | 2026-11-10, about 15:05Z | "go, commit as you go, take your recommendations" |
 | 4 | 2026-11-10, about 18:28Z | Keep going; stop reviewing for its own sake if the findings are not important; make sure the documentation is in the state John's repo asks for, so the game can be sent to his Arcade |
+| 5 | 2026-11-10, between 19:00Z and 19:25Z | Show me the hero card and open the location of the videos |
+| 6 | 2026-11-10, about 19:25Z | "go ahead and push, and I consent" |
+| 7 | 2026-11-10, about 19:26Z | "give me a better hero image" |
 
 ## Sources read in the rebuild
 
@@ -249,6 +252,7 @@ not prompts, and are not counted.
 | R28 | 2026-11-10T18:50Z | `npm run record` on the final code; `node tools/run-ts.mjs tools/bot-runs.ts stage-1`; `ffprobe`, `ffmpeg` for two frames | Both videos 7,302 delivered at 6:51; Node run equal. |
 | R29 | 2026-11-10T18:52Z | `node tools/confirm-runtime.mjs` on the final build; `docs/spec-map.png` rendered again (the page fetched IBM Plex from Google Fonts with a generic headless browser request) | Runtime section confirmed, 8 of 8. Spec map shows 124, 74 and 198. |
 | R30 | 2026-11-10T18:58Z | Fresh-copy check on a clone of `0e8572a`: `npm ci`, `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e`, `node tools/confirm-runtime.mjs` | All pass: 124 unit, 74 end-to-end with 4 skipped by design, `dist/` equal to a fresh build, runtime 8 of 8. |
+| R31 | 2026-11-10T19:30Z | `node tools/make-card.mjs arcade 7764 450 0.93` (Playwright Chromium, cwebp); `npm run build`, `npm run verify:dist`, `npm test`, `npx playwright test` on `us1-shape`, `us4-access`, `us5-endless` and the offline tests | New `public/hero.webp`, SHA-256 `8f5b5669…a94c`. All checks pass. |
 
 ## Changes of direction by the owner in the rebuild
 
@@ -256,6 +260,7 @@ not prompts, and are not counted.
 | --- | --- |
 | 2026-11-10, about 15:05Z | Dropped the review between lab steps: "go, commit as you go, take your recommendations". K1–K5 are decided as the agent recommended; see the capture log's questions table. |
 | 2026-11-10, about 18:28Z | After two code reviews of ten findings each: "if the reviews keep coming back and finding 10 things and 10 things, and they're not of importance, we don't need to keep reviewing for the sake of reviewing." And the goal for the rest: the documentation "buttoned up according to how John's repo mentions it, in order to send it to his arcade". A third review was already running; its findings are fixed only where they matter, and no fourth is run. |
+| 2026-11-10, about 19:25Z | "go ahead and push, and I consent": the branch is to be pushed, and the consent to publish covers the rebuilt game. Then "give me a better hero image": the card was made again from a different moment of play before the push. |
 
 ## Decisions the agent made without asking in the rebuild
 

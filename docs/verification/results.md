@@ -134,7 +134,7 @@ Commands: `npm test` (**107 unit tests in 15 files, all pass**) and `npm run tes
 | AC20 both renderers show the same information: same links, states, costs, tiers, sites and pulses at the same step, and each reports drawing all of it | Pass | Pass | `renderers` |
 | FR-035 a WebGL context lost in the middle of a run is survived in the fallback | Pass | Pass | `renderers` |
 | FR-036 pulses with trails; links thicker and brighter with load; cut spark and ripple; bloom | Pass by test for trails, load scaling and the two cut effects; bloom judged by eye in screenshots | Same | `viewmodel` unit tests, `us2-operate`, `us4-access` |
-| FR-038, SC-009 hero and card image | Pass | n/a | `tools/make-card.mjs`: 1600×900 (16:9), 51,902 bytes, a frame of seed `autocon` at step 6,601 in the WebGL renderer |
+| FR-038, SC-009 hero and card image | Pass | n/a | `tools/make-card.mjs`: 1600×900 (16:9), 51,902 bytes, a frame of seed `autocon` at step 6,601 in the WebGL renderer. That card was replaced on 2026-11-10; see "Card image made again" at the end. |
 | SC-006 a whole run with the network cut; no request to another host; no reference to another host in the build | Pass | Pass | `offline` |
 | All checks of stories 1 to 5 again, now with WebGL as the default renderer | Pass | Pass | `us1` to `us5` |
 
@@ -228,7 +228,7 @@ Each row names the automated check that produced the result. "Pass" means the ch
 | SC-006 plays with no network connection, served as plain files | Pass | `tests/e2e/offline.spec.ts` |
 | SC-007 no authored color in the bands; rendered share as a number | Pass | 0 authored; 0 rendered pixels at five moments, both renderers, both sizes |
 | SC-008 keyboard alone, touch at phone size, reduced motion, fallback renderer | Pass | `us4-access`, `renderers` |
-| SC-009 card image 16:9 and under 1 MB | Pass | 1600×900, 51,902 bytes |
+| SC-009 card image 16:9 and under 1 MB | Pass | 1600×900, 76,758 bytes (the card made again on 2026-11-10; see "Card image" at the end) |
 | SC-010 README another engineer can follow from a fresh copy | Pass for the README's commands, run by the build agent. Not followed by another engineer. | "Fresh copy" below |
 | SC-011 a tester explains a bad cost change from the screen alone | **Not run** | Needs a person |
 | SC-012 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone |
@@ -342,7 +342,7 @@ What this does and does not show: the commands in the README work from a fresh c
 
 ## Final run (2026-11-10)
 
-The code and the build output were last changed in commit `9b813ab`. Commits after it change records and the videos only.
+The game's code was last changed in commit `9b813ab`. Commits after it change records, the videos and the card image only (see "Card image" at the end for what was run again after that).
 
 | Check | Where | Result |
 | --- | --- | --- |
@@ -370,7 +370,7 @@ Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` 
 | --- | --- | --- |
 | 1. `ARCADE.md` at the root of the repository, from the template | Done | Every field of the template is present with the template's names; `artifacts` uses the template's seven words; text limits kept (tagline 76 characters of 90; "How it was built" 246 words of 250; three bullets) |
 | 2. Filled in by the build agent, with `unknown` where nothing was recorded; the human gives only name, GitHub name, location, links, first project, consent | Done | `started`, `wall_time` and token usage are `unknown`. The creator block is the owner's, from 2026-11-09, and was not touched by the rebuild (compared with the commit the session began from). |
-| 3. Run the game once to confirm the Runtime section; a 16:9 card image under 1 MB; commit and push | Runtime confirmed; image present; committed. **Not pushed.** | `node tools/confirm-runtime.mjs`: 8 of 8. `public/hero.webp`: 1600×900, 51,902 bytes, WebP, and the same file is in `dist/`. Pushing is the owner's. |
+| 3. Run the game once to confirm the Runtime section; a 16:9 card image under 1 MB; commit and push | Runtime confirmed; image present; committed. **Not pushed.** | `node tools/confirm-runtime.mjs`: 8 of 8. `public/hero.webp`: 1600×900, 76,758 bytes, WebP, and the same file is in `dist/`. Pushing is the owner's. |
 | 4. Send the public GitHub URL to John; nothing is listed unless `consent_to_publish: true` | **The owner's** | The repository is public and Apache-2.0. Its default branch `main` still holds the hand-built v1; the rebuild branch contains all of `main` and is ahead of it, with no divergence, so it can be brought in by fast-forward or by a pull request. `consent_to_publish` is `true` in the file, set on the owner's word on 2026-11-09 after he played the hand-built v1; whether it covers the rebuilt game is his to say (K4). |
 
 **The lab's ready-to-demo checklist**
@@ -386,4 +386,24 @@ Checked on 2026-11-10 against `automateyournetwork/NAF_AC6` at commit `b77da71` 
 | The intended files are pushed, and any live demo link opens | **Not pushed.** No live demo is claimed. | The owner's |
 
 **The README against the workshop's README shape:** title, one-line pitch, the workshop line, the project table, the challenge, what you'll learn with "Before playing", play locally, how to play with a controls table and "Progress", what the game models with "Outside the model" and a reference table, how it was built with the template's six points, verification with "Last checked" (date, system, browser, commit) and a results table that marks unrun checks as not run, known limitations and next steps, credits in the template's wording, assets and dependencies, licence. Nothing in the template's block for the attendee is left in.
+
+## Card image made again (2026-11-10T19:30Z)
+
+The owner looked at the card and asked for a better one. The first card (seed `autocon`, step 6,601, made at commit `68c4588`) had the network in the upper left with bare map on the right and below, and two cost labels partly under site names.
+
+The new card is still a frame of the game's own WebGL renderer, with no image generator: `node tools/make-card.mjs arcade 7764 450 0.93`. That is the scripted run on seed `arcade` at the step where the fiber LAX–SLC is cut, 450 ms later, so the spark and the ripple of the cut have grown. The moment was chosen from a scan of the eight seeds' runs for a late cut with all twelve sites on the map; this one spans the map from San Francisco to Washington and had the most congested links.
+
+| Check | Result |
+| --- | --- |
+| The tool's own report | 1600×900, 76,758 bytes, WebGL renderer, step 7,774, 12 sites, 21 links, 5 congested, 1 cut, spark and ripple drawn |
+| 16:9 and under 1 MB (SC-009) | Pass |
+| SHA-256 | `8f5b5669c1a9f9575f8afffa3c594a557d1c5ce75ba03ae809ea927c6a57a94c` |
+| The copy in `dist/` is the same file; `npm run verify:dist` | Pass, 13 files |
+| `npm test` | 124 of 124 |
+| End-to-end specs that load the welcome screen or check access and colour (`us1-shape`, `us4-access`, `us5-endless`, and the two offline tests) | 36 pass, 4 skipped by design; offline tests pass |
+| Looked at | The card itself, and the welcome screen with the card behind it at 1920×1080 and 844×390: the text on the panel reads clearly and the lit network shows beside it |
+
+Not run again after this change: the full end-to-end suite, the fresh-copy check and the videos. The change is one image file (and its copy in `dist/`) and the tool that makes it; the game's script and stylesheet are byte for byte the same, as `verify:dist` and the unchanged file names show. A picture taken a moment after the tool reads the scene can differ from the report by a link or two changing state; the card shows more amber links than the five reported.
+
+The tool gained two optional arguments for this, a settle time and where the scanning sweep stands, and now waits for the typefaces before the picture.
 
