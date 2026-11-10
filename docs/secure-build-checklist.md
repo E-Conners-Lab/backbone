@@ -20,7 +20,7 @@ Backbone is a static browser game. It has no backend, no accounts, no network ca
 | SEC-26 (dependency scanning) | Yes | `npm audit` on 2026-11-10: 0 vulnerabilities in 45 packages. Not in CI: there is no CI. Accepted exception, see below. |
 | SEC-27 (pinned versions, lockfile) | Yes | Seven build-time dependencies, each an exact version in `package.json`; `package-lock.json` is committed. The shipped game has no runtime dependency. `tools/run-ts.mjs` runs the project's TypeScript tools through the pinned Vite, so no unpinned runner is fetched. |
 | SEC-28, SEC-29 (signing, SBOM) | Low value for a static demo | Not done. See exceptions. |
-| SEC-30–33 (containers, network, images) | No containers ship | Not applicable. `tools/frr_check.py` runs FRR containers with `--privileged` on the developer's machine only, for a lab check, and removes them and their networks afterwards; after the run of 2026-11-10 none was left. |
+| SEC-30–33 (containers, network, images) | No containers ship | Not applicable. `tools/frr_check.py` runs FRR containers with `--privileged` on the developer's machine only, for a lab check, and removes them and their networks afterwards; after each of the two runs of 2026-11-10 none was left. |
 
 Also checked: the build has no reference to another host (`tests/e2e/offline.spec.ts`), and the test and tool servers bind to 127.0.0.1 only.
 

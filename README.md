@@ -127,7 +127,7 @@ The project follows the workshop's Spec Kit workflow: **constitution → specify
 
 ## Verification
 
-**Last checked:** @@LAST_CHECKED@@
+**Last checked:** 2026-11-10, on branch `speckit-rebuild`. The code and `dist/` are as of commit `24ea96b`; the fresh-copy check ran on a clone of `69aa8d4`. Commits after that change records only.
 
 ```sh
 npm test               # unit tests (Vitest)
@@ -156,9 +156,9 @@ python3 tools/frr_check.py   # compare the routing cases with FRR in Docker
 | Text contrast and size; every control named | Pass | Contrast at least 4.5 to 1; no text under 16 px at 1920×1080 or 11 px at 844×390; every control on every screen has a readable name |
 | Plays offline as plain files | Pass | A whole run with the network cut; no request to another host |
 | Code review of the source, tools and tests | Done | `/code-review` at level high found 10 faults; all are fixed, and each fix that could have a test has one that fails without it. The reviewer was a second session of the same model, not a person. `docs/verification/results.md` |
-| `dist/` matches the source | @@DIST@@ | `npm run verify:dist` |
+| `dist/` matches the source | Pass | `npm run verify:dist`: 13 files equal a fresh build, in the working folder and in a fresh clone |
 | Seeded-run videos at both sizes | Pass | `docs/verification/run-stage-1-844x390.mp4`, `run-stage-1-1920x1080.mp4`: the scripted player on seed `stage-1`, 7,302 delivered in 6:51 in both, equal to the same run in Node with no browser. Not a person's run. |
-| Fresh copy: serve `dist/`, install, test, build, end-to-end | @@FRESH@@ | From a clone of this branch in an empty folder |
+| Fresh copy: serve `dist/`, install, test, build, end-to-end | Pass | From a clone of this branch in an empty folder: `dist/` served as it is, then `npm ci`, 113 unit tests, the build, `verify:dist` and 72 end-to-end tests. Run by the build agent on the build machine, not by another engineer. |
 | Frame time | Recorded, not a pass | Headless Chromium on the build machine, where WebGL runs in software: 36 frames a second at 1920×1080 with WebGL, 60 with the fallback and at phone size. Main-thread work is under 1 ms a frame. This is not a phone measurement. |
 | Played by a person; a tester explains a bad cost change from the screen alone | **Not run** | Needs a person (SC-011, SC-013) |
 | 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone (SC-012) |
@@ -170,6 +170,7 @@ python3 tools/frr_check.py   # compare the routing cases with FRR in Docker
 - **Chromium only.** Other browsers are not verified.
 - **It looks plainer than the approved mock.** Site rings are white, not the mock's cyan, because cyan beside an amber link blends into the green band. The mock's reward countdown and cut countdown are not on the map; the inspector shows a cut's repair time.
 - **Labels can overlap** where links are short or sites are close together, most of all at phone size.
+- **The game-over card covers part of the map.** While the time-lapse plays behind it, the western sites are under the card.
 - **The inspector does not trap focus**, and no screen reader has been tried.
 - **Reward offers are the same every time.** The approved spec says the seed decides them, and the plan gives one offer; this is open for the owner as K6 in `docs/capture-log.md`.
 - **There is no way to export a replay.** The same seed gives the same sites, traffic and cuts, but the same run only with the same actions.

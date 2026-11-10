@@ -234,6 +234,9 @@ not prompts, and are not counted.
 | R18 | 2026-11-10T17:06Z | Phase 8: `npm run test:e2e` with the WebGL renderer as default; hero art by `tools/make-card.mjs`; frame time read from the page in headless Chromium (WebGL on SwiftShader) | Census zero in both renderers. One suite run had 1 failure of 64: a race in a test, fixed. Final run recorded below. |
 | R19 | 2026-11-10T17:27Z | `/code-review high src tools tests` (Claude Code skill, run by a forked reviewer on the same model); fixes by the build agent | 10 findings, all fixed, none left. Details in `docs/capture-log.md` step 70 and `docs/verification/results.md`. |
 | R20 | 2026-11-10T17:44Z | After the review fixes: `npm test`, `npm run test:e2e`, `python3 tools/frr_check.py` (second run, same image) | Unit 113 of 113. End-to-end 72 pass, 4 skipped by design. FRR: pass, 21 of 21, output identical to the first run; lab removed. |
+| R21 | 2026-11-10T17:49Z | `npm run record` on the final build; `node tools/run-ts.mjs tools/bot-runs.ts stage-1` as the second check; `ffprobe` and `ffmpeg` to read the files and pull three frames | Both videos 7,302 delivered at 6:51; Node run equal. SHA-256 of the videos in `docs/verification/results.md`. |
+| R22 | 2026-11-10T17:54Z | Fresh-copy check on a clone of `69aa8d4`: `npm ci` (45 packages from the npm registry, by the lockfile), `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e` | All pass: 113 unit, 72 end-to-end with 4 skipped by design, `dist/` equal to a fresh build. |
+| R23 | 2026-11-10T17:58Z | `docs/spec-map.png` rendered from `docs/spec-map.html` with Playwright's Chromium. The page fetched IBM Plex from fonts.googleapis.com and fonts.gstatic.com (a generic headless browser request, nothing identifying) | 3840×3892 PNG. Looked at. |
 
 ## Changes of direction by the owner in the rebuild
 

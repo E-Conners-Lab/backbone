@@ -214,14 +214,14 @@ description: "Task list for Backbone, first playable version (v1)"
 
 - [X] T060 Write `tools/verify-dist.mjs`, run `npm run build`, and commit `dist/` after `npm run verify:dist` passes (plan D1).
 - [X] T061 [P] Write `tests/e2e/offline.spec.ts`: a run against `dist/` with every non-local request blocked and counted; zero expected (SC-006, FR-039, C5 evidence).
-- [ ] T062 Write `tools/record-run.mjs` and record the seeded-run videos at 844×390 and 1920×1080 into `docs/verification/` (SC-005, C7 evidence).
+- [X] T062 Write `tools/record-run.mjs` and record the seeded-run videos at 844×390 and 1920×1080 into `docs/verification/` (SC-005, C7 evidence).
 - [X] T063 [P] Write `tools/frr_check.py`: build T1 and T2 from FRR containers, refuse to compare unless every adjacency is Full and every router ID is as configured, and compare cost and next hops with `tests/fixtures/ospf-cases.json` (plan D4; C1). Record the result, or record it as not run with the reason.
-- [ ] T064 Rewrite `README.md` in the StarterKit shape: status, how to play, what the game models (F1–F8, S1–S11), how it was built with the Spec Kit paths, the verification table, limits, including browsers other than Chromium (SC-010, C7).
-- [ ] T065 Review every sentence of explanatory text that ships, namely `src/content/text.json` and the model section of `README.md`, against the spec's two model tables and the cited RFC sections; record the review in `docs/verification/text-review.md` (C1 evidence).
-- [ ] T066 Record every acceptance criterion AC1–AC26 and every success criterion SC-001–SC-013 as pass, fail or not run, with the check that produced it, in `docs/verification/results.md`. SC-011 (the C2 evidence), SC-012 and SC-013 need a person and are recorded as not run (SC-004).
-- [ ] T067 Update `ARCADE.md` (leave `consent_to_publish` exactly as it is; C7, K4), `docs/secure-build-checklist.md` and `docs/spec-map.html` so they describe the rebuilt game.
+- [X] T064 Rewrite `README.md` in the StarterKit shape: status, how to play, what the game models (F1–F8, S1–S11), how it was built with the Spec Kit paths, the verification table, limits, including browsers other than Chromium (SC-010, C7).
+- [X] T065 Review every sentence of explanatory text that ships, namely `src/content/text.json` and the model section of `README.md`, against the spec's two model tables and the cited RFC sections; record the review in `docs/verification/text-review.md` (C1 evidence).
+- [X] T066 Record every acceptance criterion AC1–AC26 and every success criterion SC-001–SC-013 as pass, fail or not run, with the check that produced it, in `docs/verification/results.md`. SC-011 (the C2 evidence), SC-012 and SC-013 need a person and are recorded as not run (SC-004).
+- [X] T067 Update `ARCADE.md` (leave `consent_to_publish` exactly as it is; C7, K4), `docs/secure-build-checklist.md` and `docs/spec-map.html` so they describe the rebuilt game.
 - [ ] T068 Run `/code-review` at level `high` on the branch, fix the real findings, and record what was left and why (C5: AI output is reviewed like any other contribution).
-- [ ] T069 Fresh-copy check: clone the branch into an empty folder, serve `dist/`, then `npm ci`, `npm test`, `npm run build`, `npm run verify:dist` and `npm run test:e2e`; record the results in `docs/verification/results.md` (SC-010).
+- [X] T069 Fresh-copy check: clone the branch into an empty folder, serve `dist/`, then `npm ci`, `npm test`, `npm run build`, `npm run verify:dist` and `npm run test:e2e`; record the results in `docs/verification/results.md` (SC-010).
 - [ ] T070 Bring `PROVENANCE.md`, `docs/capture-log.md` and `docs/runbook.html` up to date (C7).
 
 ---

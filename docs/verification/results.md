@@ -224,12 +224,12 @@ Each row names the automated check that produced the result. "Pass" means the ch
 | SC-002 brute-force oracle on at least 300 random networks | Pass | 320 graphs, `tests/unit/oracle.test.ts` |
 | SC-003 identical state at every step, identical score | Pass | `tests/unit/world.test.ts`, `tests/unit/replay.test.ts`, `us5-endless` |
 | SC-004 every AC has a recorded result | Pass | The table above |
-| SC-005 a seeded run to game over at both sizes, with videos saved | See "Videos" below | `tools/record-run.mjs` |
+| SC-005 a seeded run to game over at both sizes, with videos saved | Pass (the scripted player, not a person) | `tools/record-run.mjs`; "Videos" below |
 | SC-006 plays with no network connection, served as plain files | Pass | `tests/e2e/offline.spec.ts` |
 | SC-007 no authored color in the bands; rendered share as a number | Pass | 0 authored; 0 rendered pixels at five moments, both renderers, both sizes |
 | SC-008 keyboard alone, touch at phone size, reduced motion, fallback renderer | Pass | `us4-access`, `renderers` |
 | SC-009 card image 16:9 and under 1 MB | Pass | 1600×900, 51,902 bytes |
-| SC-010 README another engineer can follow from a fresh copy | See "Fresh copy" below | A clone in an empty folder |
+| SC-010 README another engineer can follow from a fresh copy | Pass for the README's commands, run by the build agent. Not followed by another engineer. | "Fresh copy" below |
 | SC-011 a tester explains a bad cost change from the screen alone | **Not run** | Needs a person |
 | SC-012 60 frames a second on a mid-range phone | **Not run** | Needs a person and a phone |
 | SC-013 a person's run lasts 5 to 10 minutes | **Not run** | Needs a person. The scripted player's runs last 6:15 to 7:14. |
@@ -255,7 +255,7 @@ Not covered by any check: browsers other than Chromium, screen readers, a real p
 
 What this review is not: a person's review, a security audit, or a review of the specification documents.
 
-## Videos (T062, SC-005; recorded 2026-11-10T17:56Z from the final build)
+## Videos (T062, SC-005; recorded 2026-11-10T17:47Z and 17:49Z from the final build)
 
 `npm run record` plays the scripted player on seed `stage-1` in the built game, with the WebGL renderer, from the start to game over and through the time-lapse, at 4 times real speed. The speed is a multiple of the same fixed step, so it is the same run.
 
@@ -280,3 +280,39 @@ What this review is not: a person's review, a security audit, or a review of the
 Two things seen in the frames and left as they are: on the game-over screen the result card covers the western sites while the time-lapse plays behind it, and a cost label can sit partly under a site's name where a link leaves the site at a shallow angle.
 
 The first recording, from build `68c4588`, gave the same numbers. It showed a site under the control bar at phone size, which led to the framing fix; both videos were then recorded again and the first pair was replaced.
+
+## Fresh copy (T069, SC-010; 2026-11-10T17:54Z)
+
+The branch was cloned into an empty folder (`git clone --branch speckit-rebuild --single-branch`), at commit `69aa8d4`, and the README's commands were run there in order. Nothing was copied in from the working folder; Playwright's Chromium was already in the machine's cache.
+
+| Step | Result |
+| --- | --- |
+| The clone is clean and has no `node_modules` | Pass |
+| `python3 -m http.server 8791 --bind 127.0.0.1 --directory dist`, before anything is installed | Pass: the page served equals the clone's `dist/index.html`, and the script, the stylesheet and the hero image it names answer 200 |
+| `npm ci` | Pass: 45 packages |
+| `npm test` | Pass: 113 of 113 |
+| `npm run build` | Pass |
+| `npm run verify:dist` | Pass: `dist/` matches a fresh build, 13 files, and the build left `dist/` unchanged in the clone |
+| `npm run test:e2e` | Pass: 72 pass, 4 skipped by design, 0 fail. This includes a whole run played with the network cut. |
+| No tracked file changed by any of the above | Pass |
+
+What this does and does not show: the commands in the README work from a fresh copy on the build machine (macOS, Node 26.3.1). They were run by the build agent, not followed by another engineer, and not on another machine or operating system. `npm run record` and `python3 tools/frr_check.py` were not run in the clone; they were run in the working folder.
+
+## Final run (2026-11-10)
+
+The code and the build output were last changed in commit `24ea96b`. Commits after it change records only.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| `npm test` | Working folder at `24ea96b`; clone of `69aa8d4` | 113 of 113 pass, 16 files, both times |
+| `npm run test:e2e` | Working folder at `24ea96b`; clone of `69aa8d4` | 72 pass, 4 skipped by design, 0 fail, both times |
+| `npm run verify:dist` | Working folder at `24ea96b`; clone of `69aa8d4` | `dist/` matches a fresh build, 13 files, both times |
+| `python3 tools/frr_check.py` | Working folder, with the tool as changed by the review | Pass, 21 of 21; lab removed |
+| `npm run record` | Working folder, final build | Both videos: 7,302 delivered in 6:51 |
+| `npm audit`; gitleaks over the working tree | Working folder, 2026-11-10 (before the review fixes, which added no dependency) | 0 vulnerabilities; no leaks |
+
+The four skipped end-to-end tests are each run at the other screen size: touch gestures (AC15) run at phone size only; mouse and wheel (AC16), keyboard-only play (AC17) and the resize test run at desktop size only.
+
+**Failed:** nothing in the final run.
+
+**Not verified** (needs a person or equipment the build did not have): SC-011, SC-012 and SC-013; a person playing the rebuilt game at all; browsers other than Chromium; screen readers; a real phone; frame rate on real graphics hardware; the README followed by another engineer.
