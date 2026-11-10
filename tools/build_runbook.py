@@ -105,7 +105,11 @@ def header(lines: list[str]) -> list[str]:
 
 
 def table(lines: list[str], convert_time: bool = False) -> str:
-    head = "".join(f"<th>{inline(h)}</th>" for h in header(lines))
+    names = header(lines)
+    if convert_time:
+        # The log keeps UTC; the book shows the converted times, so its heading says so.
+        names[0] = "Time (US Eastern)"
+    head = "".join(f"<th>{inline(h)}</th>" for h in names)
     body = ""
     for row in rows(lines):
         cells = [eastern(row[0]) if convert_time else row[0], *row[1:]]
@@ -118,8 +122,15 @@ def main() -> int:
     log = sections((ROOT / "docs" / "capture-log.md").read_text())
     steps = ""
     for _, step, result in rows(log["Steps and results"]):
+        # A step shows as waiting only when its result states that in bold, as in
+        # "**Not run.**". Matching the words anywhere marked finished steps that
+        # merely said "opened" or "open items".
         waiting = (
-            re.search(r"not done|waiting|not run|open", result, re.IGNORECASE)
+            re.search(
+                r"\*\*[^*]*\b(not done|not run|waiting)\b[^*]*\*\*",
+                result,
+                re.IGNORECASE,
+            )
             is not None
         )
         steps += f'<li class="{"wait" if waiting else "done"}">{inline(step)}<span>{inline(result)}</span></li>'
