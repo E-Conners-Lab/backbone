@@ -128,7 +128,7 @@ The project follows the workshop's Spec Kit workflow: **constitution → specify
 
 ## Verification
 
-**Last checked:** 2026-11-10, macOS 26.7.1 (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. The game's code is as of commit `9b813ab` on branch `speckit-rebuild`. Later commits change records, the videos and the card image only; after the card image was replaced, the unit tests, `verify:dist` and the end-to-end tests that load the welcome screen were run again.
+**Last checked:** 2026-11-10, macOS 26.7.1 (Darwin 25.6.0, arm64), Node v26.3.1, Playwright 1.65.0 with its bundled Chromium headless shell 158.0.8127.18. The game's code is as of commit `9b813ab` on branch `speckit-rebuild`. Later commits change records, the videos, the card image and the tool that makes it (`tools/make-card.mjs`), and remove one unused development tool and one unlinked picture; no game code changed (`src/` is as of `9b813ab`). After the card image was replaced, the unit tests, `verify:dist` and the end-to-end tests that load the welcome screen were run again.
 
 ```sh
 npm test               # unit tests (Vitest)

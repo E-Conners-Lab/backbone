@@ -1,4 +1,4 @@
-// Serves dist/ on 127.0.0.1 for the capture tools (the hero art, the videos, screenshots),
+// Serves dist/ on 127.0.0.1 for the capture tools (the hero art, the videos),
 // and makes sure that what answers is this build.
 //
 // The tools used to pick a random port, wait a fixed 700 ms and hope. If the port was
