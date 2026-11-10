@@ -120,6 +120,8 @@ Kept from the first step. Times are UTC. Real addresses and secrets stay out. A 
 
 ## Open items
 
+- A full showcase run of the hand-built v1 was recorded to game over (seed `2328`, 8:56, 15,134 delivered, 197 inputs, none missed). The owner chose to keep the video private, so it is not in this repository. An earlier entry saying no finished video exists is **corrected** by this one.
+- Branch `showcase-video` on the remote still holds that video. The agent's attempt to delete the remote branch was blocked by its permission settings; the owner deletes it.
 - Spec Kit rebuild: the seven lab steps are still to be run, each reviewed by the owner before the next, in an agent session started in the rebuild folder.
 - On the rebuild branch `README.md`, `ARCADE.md`, `docs/spec-map.*` and the secure-build checklist still describe the hand-built v1. They are rewritten after step 7.
 
