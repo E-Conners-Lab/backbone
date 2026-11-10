@@ -161,6 +161,14 @@ export async function lay(page: Page, info: TestInfo, a: number, b: number): Pro
   const before = (await links(page)).length;
   await drag(page, info, await site(page, a), await site(page, b));
   await expect.poll(async () => (await links(page)).length, { message: `link ${a}–${b} laid` }).toBe(before + 1);
+  // While the game runs the link is pending for at most one step. Wait until it has reached
+  // the simulation, so that a caller can read the world straight afterwards.
+  await expect
+    .poll(async () => {
+      const s = await state(page);
+      return s.paused || s.rewardPending || s.pending === 0;
+    })
+    .toBe(true);
 }
 
 /** The newest messages on screen. */

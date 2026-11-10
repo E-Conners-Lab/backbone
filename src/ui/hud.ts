@@ -8,9 +8,11 @@ import type { Game } from "./game";
 export function updateHud(game: Game): void {
   const world = game.world;
   const planned = game.planned;
-  const changed = game.pending.length > 0;
-  setText(el("hud-fiber"), changed ? `${km(planned.fiberKm)} after pending` : km(planned.fiberKm));
-  setText(el("hud-upgrades"), changed && planned.upgrades !== world.upgrades ? `${planned.upgrades} after pending` : String(planned.upgrades));
+  // While the game runs a change is applied within a step, so the figure is simply the new one.
+  // While time stands still, a figure that a pending change will alter says so.
+  const held = game.holding;
+  setText(el("hud-fiber"), held && planned.fiberKm !== world.fiberKm ? `${km(planned.fiberKm)} after pending` : km(planned.fiberKm));
+  setText(el("hud-upgrades"), held && planned.upgrades !== world.upgrades ? `${planned.upgrades} after pending` : String(planned.upgrades));
   const size = world.tuning.meterSize;
   const meter = el("hud-meter");
   meter.setAttribute("aria-valuemax", String(size));

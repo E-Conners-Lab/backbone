@@ -66,12 +66,44 @@ describe("camera (FR-029: touch targets stay right on the tilted map)", () => {
 
   it("a drag keeps the grabbed map point under the pointer, anywhere on the tilted map", () => {
     const c = camera(1920, 1080);
-    for (const [fromX, fromY, toX, toY] of [[200, 900, 320, 840], [1500, 150, 1300, 400], [960, 540, 100, 100]] as const) {
+    for (const [fromX, fromY, toX, toY] of [[200, 900, 320, 840], [1500, 150, 1300, 400], [960, 540, 500, 300]] as const) {
       const grabbed = c.toMap(fromX, fromY);
       c.pin(grabbed, toX, toY);
       const under = c.toMap(toX, toY);
       expect(under.x).toBeCloseTo(grabbed.x, 6);
       expect(under.y).toBeCloseTo(grabbed.y, 6);
+    }
+  });
+
+  it("cannot be panned out of sight: the centre stays inside the fitted box, by drag, by keys and by zoom", () => {
+    // Found in review: nothing limited panning, so the map could be dragged away with no way back but a new run.
+    for (const [w, h] of [[844, 390], [1920, 1080]] as const) {
+      const c = camera(w, h);
+      const inside = (): boolean => c.cx >= -2400 && c.cx <= 2000 && c.cy >= -1500 && c.cy <= 1300;
+      for (let i = 0; i < 40; i++) c.panBy(-600, 0);
+      expect(c.cx).toBe(2000);
+      for (let i = 0; i < 40; i++) c.panBy(0, -600);
+      expect(c.cy).toBe(-1500);
+      // A drag that would take the grabbed point far past the corner stops at the box.
+      c.pin(c.toMap(w / 2, h / 2), -50 * w, -50 * h);
+      expect(inside()).toBe(true);
+      c.pin(c.toMap(w / 2, h / 2), 50 * w, 50 * h);
+      expect(inside()).toBe(true);
+      expect([c.cx, c.cy]).toEqual([-2400, 1300]);
+      for (let i = 0; i < 30; i++) c.zoomAt(1.5, 0, 0);
+      expect(inside()).toBe(true);
+      // With the centre among the sites, zooming all the way out shows the whole box again.
+      for (let i = 0; i < 80; i++) c.zoomAt(0.5, w / 2, h / 2);
+      for (const [x, y] of [[-2400, -1500], [2000, 1300]] as const) {
+        const p = c.toScreen(x, y);
+        expect(p.x).toBeGreaterThan(0);
+        expect(p.x).toBeLessThan(w);
+        expect(p.y).toBeGreaterThan(0);
+        expect(p.y).toBeLessThan(h);
+      }
+      // Fitting again starts fresh, whatever the box was before.
+      c.fit(5000, 5000, 6000, 6000);
+      expect([c.cx, c.cy]).toEqual([5500, 5500]);
     }
   });
 

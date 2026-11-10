@@ -1,14 +1,16 @@
 // One run on screen: the world, its command log, the fixed-step loop and pause.
-// While time stands still, because the game is paused or a reward is waiting to be chosen,
-// changes are checked against a copy of the world, shown as pending, and all sent together
-// in the step that starts time again (FR-016, FR-024, AC14). They stay pending, and the
-// copy stays in use, until that step has run: there is no moment at which a change is
-// neither pending nor applied.
+// Every change the player makes is checked at once against a copy of the world as it will
+// be, and waits there, pending, for the next simulation step. While the game runs that is
+// at most one step away. While time stands still, because the game is paused or a reward
+// is waiting to be chosen, the changes collect, are shown as pending, and all go in the
+// step that starts time again (FR-016, FR-024, AC14). The copy is what the screen reads
+// until that step has run, so a change is never neither pending nor applied, and two
+// changes made within one step are checked one after the other, not both against the past.
 
 import { botCommands } from "../sim/bot";
 import { recordCommands } from "../sim/replay";
 import type { Command, LinkId, LogEntry, Reason, Region, SiteId, StepEvents, Tuning, World } from "../sim/types";
-import { applyCommand, cloneWorld, createWorld, step, validate } from "../sim/world";
+import { applyCommand, cloneWorld, createWorld, step } from "../sim/world";
 import type { Effect } from "../render/viewmodel";
 
 export type Tool = "link" | "cost" | "upgrade" | "remove";
@@ -39,7 +41,6 @@ export class Game {
   tableSite: SiteId | null = null;
   drag: { from: SiteId; x: number; y: number } | null = null;
 
-  private queue: Command[] = [];
   private carry = 0;
 
   constructor(
@@ -67,39 +68,19 @@ export class Game {
 
   /**
    * Sends a command. Returns the reason when the rules refuse it, so the caller can say why.
-   * While time stands still, or while earlier pending changes have not been applied yet, the
-   * command is held as pending; otherwise it applies at the next step.
+   * An accepted command is pending until the next step applies it.
    */
   issue(command: Command): Reason | null {
-    // The reward choice is held like any other change, after the ones made before it, and is
-    // what lets the next step run. Checked against the copy, a second choice is refused.
-    if (this.holding || this.projected !== null) return this.hold(command);
-    const reason = validate(this.world, command);
-    if (!reason) this.queue.push(command);
+    this.projected ??= cloneWorld(this.world);
+    const reason = applyCommand(this.projected, command);
+    if (!reason) this.pending.push(command);
     return reason;
   }
 
   setPaused(paused: boolean): void {
     if (paused === this.paused || this.world.over || this.world.rewardPending) return;
+    // What is pending stays pending either way: it is released by the next step, not here.
     this.paused = paused;
-    if (!paused) return; // what was held is released by the next step, not here
-    // A command sent in the instant before the pause has not reached the simulation yet.
-    // It joins the pending changes, so that the copy of the world later changes are checked
-    // against already has it, and link IDs given there match the ones given on resume.
-    const waiting = this.queue;
-    this.queue = [];
-    for (const command of waiting) {
-      const reason = this.hold(command);
-      if (reason) this.hooks.onRejected(reason, command);
-    }
-  }
-
-  /** Checks a command against the world as it will be, and keeps it as pending if it is allowed. */
-  private hold(command: Command): Reason | null {
-    this.projected ??= cloneWorld(this.world);
-    const reason = applyCommand(this.projected, command);
-    if (!reason) this.pending.push(command);
-    return reason;
   }
 
   /** A reward has been chosen and is waiting, with the changes before it, for the next step. */
@@ -141,8 +122,7 @@ export class Game {
   private stepOnce(): void {
     // Everything held goes into this one step, in the order it was made, so there is one
     // route calculation. Only now does the copy of the world stop being the one to read.
-    const commands = [...this.queue, ...this.pending, ...(this.bot ? botCommands(this.world) : [])];
-    this.queue = [];
+    const commands = [...this.pending, ...(this.bot ? botCommands(this.world) : [])];
     this.pending = [];
     this.projected = null;
     recordCommands(this.log, this.world, commands);

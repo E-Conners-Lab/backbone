@@ -119,9 +119,16 @@ test("AC4: after a cost change, pulses use the new lowest-cost path", async ({ p
   // Raise the direct link to 25 through its options panel: the path through site 2 now costs less.
   await tap(page, info, direct);
   await expect(page.locator("#linkpanel")).toBeVisible();
+  // Typed and entered while the game runs. The field keeps what was set, so a second Enter
+  // does not put the old cost back (found in the third review).
   await page.locator("#lp-cost").fill("25");
-  await page.locator("#lp-set").click();
+  await page.locator("#lp-cost").press("Enter");
+  await expect(page.locator("#lp-cost")).toHaveValue("25");
   await expect.poll(async () => (await links(page)).find((l) => l.id === direct.id)!.cost).toBe(25);
+  await page.locator("#lp-cost").press("Enter");
+  await advance(page, 2);
+  expect((await links(page)).find((l) => l.id === direct.id)!.cost).toBe(25);
+  await expect(page.locator("#lp-cost")).toHaveValue("25");
   await page.locator("#lp-close").click();
   await advance(page, 80); // let the packets already on the direct link arrive
 

@@ -352,11 +352,6 @@ export function buildScene(world: World | null, view: ViewState): Scene {
   return scene;
 }
 
-/** Packets per second a link direction serves, for labels. */
-export function capacityLabel(world: World, link: Link): number {
-  return capacityOf(world, link);
-}
-
 /** What a renderer reports it drew, so two renderers can be compared (AC20). */
 export interface DrawReport {
   links: number;
@@ -365,9 +360,4 @@ export interface DrawReport {
   effects: number;
   labels: number;
   icons: number;
-}
-
-/** What any renderer must draw for a scene. */
-export function expectedReport(scene: Scene): Omit<DrawReport, "labels" | "icons"> {
-  return { links: scene.links.length, pulses: scene.pulses.length, sites: scene.sites.length, effects: scene.effects.length };
 }

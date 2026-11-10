@@ -23,6 +23,8 @@ export class Camera {
   tilt = (32 * Math.PI) / 180;
   minZoom = 0.02;
   maxZoom = 4;
+  /** The box of map points the view was last fitted to. Panning keeps the centre inside it. */
+  private box: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
 
   private get distance(): number {
     return this.height * 2.4;
@@ -58,6 +60,7 @@ export class Camera {
    * bars at the top and bottom leave free.
    */
   fit(minX: number, minY: number, maxX: number, maxY: number, top = 0, bottom = 0, margin = 0.84): void {
+    this.box = null;
     this.cx = (minX + maxX) / 2;
     this.cy = (minY + maxY) / 2;
     const spanX = Math.max(1, maxX - minX);
@@ -67,6 +70,17 @@ export class Camera {
     this.zoom = Math.min(this.maxZoom, Math.max(this.minZoom, this.zoom));
     // Put the middle of the box in the middle of the free part, not of the whole view.
     this.pin({ x: this.cx, y: this.cy }, this.width / 2, top + free / 2);
+    this.box = { minX, minY, maxX, maxY };
+  }
+
+  /**
+   * Keeps the centre of the view inside the fitted box, so the map cannot be dragged out of
+   * sight: with the centre among the sites, zooming out always brings them back into view.
+   */
+  private keepInBox(): void {
+    if (!this.box) return;
+    this.cx = Math.min(this.box.maxX, Math.max(this.box.minX, this.cx));
+    this.cy = Math.min(this.box.maxY, Math.max(this.box.minY, this.cy));
   }
 
   /** Map km to screen pixels. `depth` shifts a layer for parallax: 1 moves with the map. */
@@ -97,16 +111,19 @@ export class Camera {
   panBy(dx: number, dy: number): void {
     this.cx -= dx / this.zoom;
     this.cy += dy / (this.zoom * Math.cos(this.tilt));
+    this.keepInBox();
   }
 
   /**
    * Moves the view so that a map point sits under a screen point. A drag grabs the map
-   * point under the pointer and keeps it there, which stays exact on the tilted map.
+   * point under the pointer and keeps it there, which stays exact on the tilted map, up to
+   * the edge of the fitted box.
    */
   pin(map: { x: number; y: number }, sx: number, sy: number): void {
     const under = this.toMap(sx, sy);
     this.cx += map.x - under.x;
     this.cy += map.y - under.y;
+    this.keepInBox();
   }
 
   /** Zooms by `factor`, keeping the map point under (sx, sy) where it is. */
@@ -116,6 +133,7 @@ export class Camera {
     const after = this.toMap(sx, sy);
     this.cx += before.x - after.x;
     this.cy += before.y - after.y;
+    this.keepInBox();
   }
 }
 

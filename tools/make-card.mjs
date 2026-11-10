@@ -15,8 +15,12 @@ import { chromium } from "@playwright/test";
 import { serveDist } from "./serve-dist.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const seed = /^[A-Za-z0-9-]{1,24}$/.test(process.argv[2] ?? "") ? process.argv[2] : "2328";
+const seed = process.argv[2] ?? "2328";
 const step = Number(process.argv[3] ?? 5400);
+if (!/^[A-Za-z0-9-]{1,24}$/.test(seed) || !Number.isInteger(step) || step < 1) {
+  console.error("usage: node tools/make-card.mjs [seed: 1 to 24 letters, digits or hyphens] [step: a whole number above 0]");
+  process.exit(2);
+}
 const WIDTH = 1600;
 const HEIGHT = 900;
 const out = join(root, "public", "hero.webp");
@@ -37,6 +41,8 @@ try {
   await page.evaluate((target) => window.__backbone.advance(Math.max(0, target - window.__backbone.state().step)), step);
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)))));
   const state = await page.evaluate(() => window.__backbone.state());
+  // The picture must be of the moment asked for, in a run that is still going.
+  if (state.over || state.step < step) throw new Error(`the run on seed ${seed} is at step ${state.step}${state.over ? " and over" : ""}; step ${step} was asked for`);
   await page.screenshot({ path: png });
   await browser.close();
 

@@ -165,7 +165,7 @@ export class Inspector {
       return;
     }
     setText(el("route-title"), `Router table of ${site.code} (ID ${site.id})`);
-    setText(el("route-note"), game.pending.length > 0 ? "The table in force. Pending changes are not included until play resumes." : "The table in force: lowest total cost to every other site.");
+    setText(el("route-note"), game.holding && game.pending.length > 0 ? "The table in force. Pending changes are not included until play resumes." : "The table in force: lowest total cost to every other site.");
     const rows: HTMLTableRowElement[] = [];
     for (const other of presentSites(world)) {
       if (other.id === site.id) continue;

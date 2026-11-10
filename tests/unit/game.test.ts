@@ -194,16 +194,65 @@ describe("a command sent in the instant before a pause (AC14)", () => {
     expect(game.world.step).toBe(tuning.stepsPerSec);
   });
 
-  it("is refused in words at the pause if an earlier queued command already spent what it needs", () => {
+  it("is checked against the changes made just before it, so the second of two that cannot both be paid for is refused at once", () => {
     const { game, refused } = newGame();
     game.advance(5);
     const [a, b, c] = presentSites(game.world);
     game.world.fiberKm = Math.max(linkLength(a!, b!), linkLength(a!, c!));
-    // Each is affordable alone, so each is accepted while running; together they are not.
+    // Each is affordable alone; together they are not. The second hears so when it is made.
     expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBeNull();
-    expect(game.issue({ type: "layLink", a: a!.id, b: c!.id })).toBeNull();
+    expect(game.issue({ type: "layLink", a: a!.id, b: c!.id })).toBe("not-enough-fiber");
     game.setPaused(true);
     expect(game.pending).toHaveLength(1);
-    expect(refused.map((r) => r.reason)).toEqual(["not-enough-fiber"]);
+    expect(refused).toEqual([]);
+  });
+});
+
+describe("changes made while the game runs (found in the third review)", () => {
+  it("show at once in the planned world, which is what a link's options read", () => {
+    const { game } = newGame();
+    game.advance(5);
+    game.world.fiberKm = 1_000_000;
+    const [a, b] = presentSites(game.world);
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBeNull();
+    game.tick(game.stepMs);
+    const link = findLink(game.world, a!.id, b!.id)!;
+    expect(game.pending).toHaveLength(0);
+
+    // Type a cost and press Enter: before the next step, the options must already show 25.
+    expect(game.holding).toBe(false);
+    expect(game.issue({ type: "setCost", link: link.id, cost: 25 })).toBeNull();
+    expect(findLink(game.planned, a!.id, b!.id)!.cost).toBe(25);
+    expect(findLink(game.world, a!.id, b!.id)!.cost).toBe(DEFAULT_LINK_COST);
+    game.tick(game.stepMs);
+    expect(findLink(game.world, a!.id, b!.id)!.cost).toBe(25);
+    expect(game.projected).toBeNull();
+  });
+
+  it("are checked one after the other when two fall inside one step: every press of + counts, and a second upgrade with one in stock is refused at once", () => {
+    const { game, refused } = newGame();
+    game.advance(5);
+    game.world.fiberKm = 1_000_000;
+    const [a, b] = presentSites(game.world);
+    expect(game.issue({ type: "layLink", a: a!.id, b: b!.id })).toBeNull();
+    game.tick(game.stepMs);
+    const id = findLink(game.world, a!.id, b!.id)!.id;
+    const before = game.world.step;
+
+    // Three presses of "+" within one step, each reading the cost the options show.
+    for (let press = 0; press < 3; press++) {
+      const shown = findLink(game.planned, a!.id, b!.id)!.cost;
+      expect(game.issue({ type: "setCost", link: id, cost: shown + 1 })).toBeNull();
+    }
+    expect(game.world.upgrades).toBe(1);
+    expect(game.issue({ type: "upgrade", link: id })).toBeNull();
+    expect(game.issue({ type: "upgrade", link: id })).toBe("no-upgrade");
+    expect(game.world.step).toBe(before);
+
+    game.tick(game.stepMs);
+    expect(game.world.step).toBe(before + 1);
+    expect(findLink(game.world, a!.id, b!.id)).toMatchObject({ cost: DEFAULT_LINK_COST + 3, tier: 1 });
+    expect(game.world.upgrades).toBe(0);
+    expect(refused).toEqual([]);
   });
 });

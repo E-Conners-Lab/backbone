@@ -317,14 +317,18 @@ class Lab:
         entries = table.get(f"{self.loopback(destination)}/32")
         if not entries:
             return None
+        # Only a route FRR has selected and installed is its answer, and only the next hops it
+        # is forwarding through. Anything else counts as no route, never as a match.
         entry = next(
-            (e for e in entries if e.get("selected") or e.get("installed")), entries[0]
+            (e for e in entries if e.get("selected") and e.get("installed")), None
         )
+        if entry is None:
+            return None
         hops = sorted(
             {
                 self.owner[hop["ip"]]
                 for hop in entry.get("nexthops", [])
-                if hop.get("ip") in self.owner
+                if hop.get("active") and hop.get("fib") and hop.get("ip") in self.owner
             }
         )
         if "metric" not in entry:
@@ -433,7 +437,7 @@ def main() -> int:
             lab.build(args.base + n)
             adjacencies[name] = lab.wait_healthy()
 
-        t1 = next(lab for lab in labs if lab.name == "T1")
+        by_name = {lab.name: lab for lab in labs}
         for case in fixtures["routing"]:
             if not case["sharing"]:
                 # Case 6 keeps one route and breaks the tie by lowest router ID. That tie-break is
@@ -448,27 +452,33 @@ def main() -> int:
                     }
                 )
                 continue
+            # Each case runs on the topology it names, not on T1 by assumption.
+            net = by_name.get(case["topology"])
+            if net is None:
+                raise LabError(
+                    f"case {case['case']}: no lab was built for topology {case['topology']}"
+                )
             changed_costs = [
-                (a, b, t1.link(a, b).cost) for a, b, _ in case.get("setCost", [])
+                (a, b, net.link(a, b).cost) for a, b, _ in case.get("setCost", [])
             ]
             for a, b, cost in case.get("setCost", []):
-                t1.set_cost(a, b, cost)
+                net.set_cost(a, b, cost)
             for a, b in case.get("cut", []):
-                t1.set_up(a, b, False)
-            t1.wait_healthy()
-            settle(t1, case["expect"], case.get("unreachable", []))
+                net.set_up(a, b, False)
+            net.wait_healthy()
+            settle(net, case["expect"], case.get("unreachable", []))
             compare(
-                t1,
+                net,
                 f"case {case['case']}",
                 case["expect"],
                 case.get("unreachable", []),
                 rows,
             )
             for a, b, cost in changed_costs:
-                t1.set_cost(a, b, cost)
+                net.set_cost(a, b, cost)
             for a, b in case.get("cut", []):
-                t1.set_up(a, b, True)
-            t1.wait_healthy()
+                net.set_up(a, b, True)
+            net.wait_healthy()
 
         # Case 7: the split is per hop. FRR's part is the control plane: which next hops each
         # router on the way holds. The shares follow from equal sharing at each hop.
