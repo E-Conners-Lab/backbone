@@ -237,6 +237,8 @@ not prompts, and are not counted.
 | R21 | 2026-11-10T17:49Z | `npm run record` on the final build; `node tools/run-ts.mjs tools/bot-runs.ts stage-1` as the second check; `ffprobe` and `ffmpeg` to read the files and pull three frames | Both videos 7,302 delivered at 6:51; Node run equal. SHA-256 of the videos in `docs/verification/results.md`. |
 | R22 | 2026-11-10T17:54Z | Fresh-copy check on a clone of `69aa8d4`: `npm ci` (45 packages from the npm registry, by the lockfile), `npm test`, `npm run build`, `npm run verify:dist`, `npm run test:e2e` | All pass: 113 unit, 72 end-to-end with 4 skipped by design, `dist/` equal to a fresh build. |
 | R23 | 2026-11-10T17:58Z | `docs/spec-map.png` rendered from `docs/spec-map.html` with Playwright's Chromium. The page fetched IBM Plex from fonts.googleapis.com and fonts.gstatic.com (a generic headless browser request, nothing identifying) | 3840×3892 PNG. Looked at. |
+| R24 | 2026-11-10T18:07Z | Second `/code-review high`, a new forked session of `claude-fable-5-2`, over the files changed by the first round (178,165 tokens and 36 tool calls as reported by the harness); fixes by the build agent | 10 findings: 9 fixed, 1 left and recorded. `docs/verification/results.md`. |
+| R25 | 2026-11-10T18:26Z | After the second round: `npm test`, `npm run test:e2e` (twice), `npm run verify:dist`, `python3 tools/frr_check.py` (third run) | Unit 121 of 121. End-to-end 74 pass, 4 skipped by design, after one test helper was rewritten. `dist/` matches at `7401e30`. FRR: pass, 21 of 21. |
 
 ## Changes of direction by the owner in the rebuild
 
