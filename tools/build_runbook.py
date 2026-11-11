@@ -71,13 +71,14 @@ def eastern(cell: str) -> str:
 
 
 def eastern_approx(cell: str) -> str:
-    """Rewrites "YYYY-MM-DD, about HH:MM" or "...HH:MM–HH:MM" (UTC) as US Eastern; leaves other text alone."""
+    """Rewrites "YYYY-MM-DD, about HH:MM", "... before HH:MM" or "...HH:MM–HH:MM" (UTC) as US Eastern; leaves other text alone."""
     found = re.match(
-        r"(\d{4}-\d{2}-\d{2}), about (\d{2}:\d{2})(?:–(\d{2}:\d{2}))?$", cell.strip()
+        r"(\d{4}-\d{2}-\d{2}), (about|before) (\d{2}:\d{2})(?:–(\d{2}:\d{2}))?$",
+        cell.strip(),
     )
     if not found:
         return cell
-    day, start, end = found.groups()
+    day, word, start, end = found.groups()
 
     def local(clock: str) -> datetime:
         return (
@@ -87,7 +88,7 @@ def eastern_approx(cell: str) -> str:
         )
 
     first = local(start)
-    text = f"{first.strftime('%a %b')} {first.day}, about {first.strftime('%I:%M %p').lstrip('0')}"
+    text = f"{first.strftime('%a %b')} {first.day}, {word} {first.strftime('%I:%M %p').lstrip('0')}"
     if end:
         text += f"–{local(end).strftime('%I:%M %p').lstrip('0')}"
     return f"{text} {first.strftime('%Z')}"

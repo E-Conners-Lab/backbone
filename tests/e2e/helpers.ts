@@ -235,9 +235,31 @@ export async function censusRun(page: Page, info: TestInfo, query: string): Prom
   await take("fiber cut");
   await advance(page, 3600);
   await take("congested");
-  await page.keyboard.press("Space");
+  // Pause and open the inspector with their buttons, so the fourth shot is what its name says at
+  // both sizes: pausing opens the inspector by itself only on a wide screen. The game refuses to
+  // pause in the one frame where a reward is being offered, so the button is pressed until it has.
+  await expect
+    .poll(async () => {
+      if (!(await state(page)).paused) await page.locator("#btn-pause").click();
+      return (await state(page)).paused;
+    })
+    .toBe(true);
+  if (await page.locator("#inspector").isHidden()) await page.locator("#btn-inspector").click();
+  await expect(page.locator("#inspector")).toBeVisible();
   await take("paused with the inspector");
-  for (let i = 0; i < 200 && !(await state(page)).over; i++) await advance(page, 200);
+  // The game does not step while it is paused. Resume, or the last shot is the paused screen again.
+  if (await page.locator("#inspector").isVisible()) await page.locator("#inspector-close").click();
+  await expect
+    .poll(async () => {
+      if ((await state(page)).paused) await page.locator("#btn-pause").click();
+      return (await state(page)).paused;
+    })
+    .toBe(false);
+  await toGameOver(page);
+  await expect(page.locator("#gameover")).toBeVisible();
+  // The time-lapse starts by itself at game over. Wait for it to finish, so the map behind the
+  // panel is the network as the run ended and not whichever replay frame the shot lands on.
+  await expect.poll(async () => (await state(page)).lapse?.playing ?? false, { timeout: 60_000 }).toBe(false);
   await take("game over");
   const renderer = (await state(page)).renderer;
   const result: CensusResult = {

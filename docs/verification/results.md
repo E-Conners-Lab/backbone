@@ -109,6 +109,8 @@ Full-page screenshots decoded in Node by `tests/e2e/census.ts`. Share of strongl
 | Paused with the inspector | 0 of 168,525 | 0 | 0 of 48,363 | 0 |
 | Game over | 0 of 106,159 | 0 | 0 of 28,164 | 0 |
 
+**Corrected 2026-11-11:** the row "Game over" above was not a game-over screen. The test helper paused the game for the fourth shot and never resumed it, and the game does not step while paused, so the fifth shot was the paused screen again a few seconds later. On the desktop the other four rows are what they say. On the phone the fourth is not: the helper paused with Space, which opens the inspector only on a screen at least 900 wide, and the phone test is 844 wide, so that shot was a paused screen without the inspector. The helper is fixed and the census was run again with a real game-over screen: see "Color census run again, with a real game-over screen" at the end.
+
 The first measurement was not zero: at the congested moment 25 green-band and 13 red-band pixels of 144,085 on desktop (0.017% and 0.009%), and 12 and 8 on the phone. Causes, found by listing the pixels: cyan (site rings, capacity rails, the brightened color of busy links) blending with an amber link at their edges lands in the green band; and old magenta sparks left on screen by the test's fast-forward lay over an amber link. Fixes: nothing cyan touches a link any more (site rings and rails are ice white, a loaded link brightens toward white), cut links have no halo, the ripple is white, and effects end with simulated time as well as real time. The census decoder is itself checked: a pure green page reads 100% green, a pure red page 100% red, and the palette's own colors read 0.
 
 ### Problems found by these checks and fixed
@@ -149,6 +151,8 @@ Pixels in the green band and in the red band, of the strongly colored pixels in 
 | Congested | 0 and 0 of 228,954 | 0 and 0 of 151,593 | 0 and 0 of 55,957 | 0 and 0 of 50,890 |
 | Paused with the inspector | 0 and 0 of 225,084 | 0 and 0 of 180,843 | 0 and 0 of 56,971 | 0 and 0 of 52,137 |
 | Game over | 0 and 0 of 177,815 | 0 and 0 of 114,295 | 0 and 0 of 33,112 | 0 and 0 of 29,345 |
+
+**Corrected 2026-11-11:** the row "Game over" above was not a game-over screen. The test helper paused the game for the fourth shot and never resumed it, and the game does not step while paused, so the fifth shot was the paused screen again a few seconds later. On the desktop the other four rows are what they say. On the phone the fourth is not: the helper paused with Space, which opens the inspector only on a screen at least 900 wide, and the phone test is 844 wide, so that shot was a paused screen without the inspector. The helper is fixed and the census was run again with a real game-over screen: see "Color census run again, with a real game-over screen" at the end.
 
 Zero is the result of these five moments on one seed, not a proof for every frame. The bloom's light is pulled most of the way toward white before it is blurred, so that it lightens a line of another color without shifting its hue.
 
@@ -433,3 +437,30 @@ Run by the build agent on the build machine, so the tools were the ones already 
 | SC-011 a tester explains a bad cost change from the screen alone | Not run. No explanation was recorded. |
 | SC-012 60 frames a second on a mid-range phone | Not run. "It feels smooth" on an iPhone 17 Pro is an impression on a high-end phone; no frame rate was measured. |
 | SC-013 a person's run lasts 5 to 10 minutes | Owner's report, not timed: about 6 or 7 minutes, inside the range. Whether that was one run from Start to game over was not said. |
+
+## Color census run again, with a real game-over screen (2026-11-11T17:10Z)
+
+A code review on 2026-11-11 pointed out that `censusRun` in `tests/e2e/helpers.ts` pressed Space to pause for its fourth shot and then tried to run on to game over while still paused. The agent replayed the same steps against the built game and read the game's own state at each shot: at the fifth shot the game was paused at the step of the fourth, not over, and the game-over panel was not showing. So every earlier "Game over" row of the census measured the paused screen a second time. The steps were the same in every earlier version of the test. A second review the same day added that on the phone the earlier fourth shot had no inspector either: Space opens it only on a screen at least 900 wide.
+
+The helper now:
+
+- presses the Pause button until the game reports that it is paused, and opens the inspector with its own button, at both sizes;
+- closes the inspector and presses Pause until the game reports that it is running;
+- plays to game over with `toGameOver`, which fails if the run does not end;
+- waits for the game-over panel and for the time-lapse to finish, so the map behind the panel is the network as the run ended.
+
+No game code changed. Command: `npx playwright test tests/e2e/us4-access.spec.ts tests/e2e/renderers.spec.ts -g "census"`, against the committed `dist/`: **4 pass** (both renderers, both sizes).
+
+Pixels in the green band and in the red band, of the strongly colored pixels in a full-page screenshot:
+
+| Moment | Desktop WebGL | Desktop fallback | Phone WebGL | Phone fallback |
+| --- | --- | --- | --- | --- |
+| Early run | 0 and 0 of 103,074 | 0 and 0 of 85,772 | 0 and 0 of 36,808 | 0 and 0 of 33,814 |
+| Fiber cut (spark and ripple on screen) | 0 and 0 of 199,468 | 0 and 0 of 106,781 | 0 and 0 of 45,450 | 0 and 0 of 37,954 |
+| Congested | 0 and 0 of 232,823 | 0 and 0 of 164,891 | 0 and 0 of 52,799 | 0 and 0 of 47,164 |
+| Paused with the inspector open | 0 and 0 of 219,967 | 0 and 0 of 181,302 | 0 and 0 of 43,977 | 0 and 0 of 38,428 |
+| Game over (panel showing, time-lapse finished) | 0 and 0 of 247,119 | 0 and 0 of 138,347 | 0 and 0 of 46,741 | 0 and 0 of 40,498 |
+
+The result the README gives (no pixel in either band at five moments, in both renderers and at both sizes) now rests on this run. The totals of colored pixels change a little from run to run, because the screen is animated; the zeros are the result. A run about ten minutes earlier, before the wait for the time-lapse was added, also gave zero in every cell. As before, zero is the result of these five moments on one seed, not a proof for every frame.
+
+When this was written the fix was on the branch `speckit-rebuild` only, and the copy of the game in pull request #2 on `automateyournetwork/NAF_AC6` had been taken from `main` at `a360a83`, before the fix. At 2026-11-11T17:01Z the owner said to merge the fix into `main` and to refresh that copy; GitHub's records of the two pull requests show what was done.
