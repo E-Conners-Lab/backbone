@@ -235,9 +235,17 @@ export async function censusRun(page: Page, info: TestInfo, query: string): Prom
   await take("fiber cut");
   await advance(page, 3600);
   await take("congested");
-  await page.keyboard.press("Space");
+  // Pause and open the inspector with their buttons, so the fourth shot is what its name says.
+  await page.locator("#btn-pause").click();
+  if (await page.locator("#inspector").isHidden()) await page.locator("#btn-inspector").click();
+  if (!(await state(page)).paused) throw new Error("censusRun: the game is not paused for the fourth shot");
   await take("paused with the inspector");
+  // The game does not step while it is paused. Resume, or the last shot is the paused screen again.
+  if (await page.locator("#inspector").isVisible()) await page.locator("#inspector-close").click();
+  await page.locator("#btn-pause").click();
   for (let i = 0; i < 200 && !(await state(page)).over; i++) await advance(page, 200);
+  if (!(await state(page)).over) throw new Error("censusRun: the run did not reach game over, so there is no game-over screen to measure");
+  await page.locator("#gameover").waitFor({ state: "visible" });
   await take("game over");
   const renderer = (await state(page)).renderer;
   const result: CensusResult = {
